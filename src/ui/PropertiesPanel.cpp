@@ -27,6 +27,10 @@ PropertiesPanel::PropertiesPanel(Scene* scene, QWidget* parent)
     rotYSpin = new QDoubleSpinBox(); rotYSpin->setRange(-3.14, 3.14); rotYSpin->setSingleStep(0.1);
     rotZSpin = new QDoubleSpinBox(); rotZSpin->setRange(-3.14, 3.14); rotZSpin->setSingleStep(0.1);
 
+    sizeXSpin = new QDoubleSpinBox(); sizeXSpin->setRange(0, 100); sizeXSpin->setSingleStep(0.1);
+    sizeYSpin = new QDoubleSpinBox(); sizeYSpin->setRange(0, 100); sizeYSpin->setSingleStep(0.1);
+    sizeZSpin = new QDoubleSpinBox(); sizeZSpin->setRange(0, 100); sizeZSpin->setSingleStep(0.1);
+
     // connect common
     connect(posXSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
         [this](double v) { if (currentObject) currentObject->setPositionX(v); });
@@ -41,6 +45,13 @@ PropertiesPanel::PropertiesPanel(Scene* scene, QWidget* parent)
         [this](double v) { if (currentObject) currentObject->setRotationY(v); });
     connect(rotZSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
         [this](double v) { if (currentObject) currentObject->setRotationZ(v); });
+
+    connect(sizeXSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+        [this](double v) { if (currentObject) currentObject->setScaleX(v); });
+    connect(sizeYSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+        [this](double v) { if (currentObject) currentObject->setScaleY(v); });
+    connect(sizeZSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+        [this](double v) { if (currentObject) currentObject->setScaleZ(v); });
 
     // light-specific
     lightTypeCombo = new QComboBox();
@@ -83,6 +94,7 @@ void PropertiesPanel::clearPanel() {
         if (auto* w = it->widget()) {
             if (w != posXSpin && w != posYSpin && w != posZSpin &&
                 w != rotXSpin && w != rotYSpin && w != rotZSpin &&
+                w != sizeXSpin && w != sizeYSpin && w != sizeZSpin &&
                 w != lightTypeCombo && w != intensitySpin && w != colorButton) {
                 w->deleteLater();
             }
@@ -112,6 +124,11 @@ void PropertiesPanel::onObjectSelected(SceneObject* object) {
     formLayout->addRow("Rotation Z:", rotZSpin);
     rotXSpin->show(); rotYSpin->show(); rotZSpin->show();
     rotXSpin->setValue(object->getRotationX()); rotYSpin->setValue(object->getRotationY()); rotZSpin->setValue(object->getRotationZ());
+    formLayout->addRow("Scale X:", sizeXSpin);
+    formLayout->addRow("Scale Y:", sizeYSpin);
+    formLayout->addRow("Scale Z:", sizeZSpin);
+    sizeXSpin->show(); sizeYSpin->show(); sizeZSpin->show();
+    sizeXSpin->setValue(object->getScaleX()); sizeYSpin->setValue(object->getScaleY()); sizeZSpin->setValue(object->getScaleZ());
     if (auto* l = dynamic_cast<Light*>(object)) setupForLight(l);
     else if (auto* c = dynamic_cast<Cube*>(object)) setupForCube(c);
 }

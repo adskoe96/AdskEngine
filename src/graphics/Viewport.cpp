@@ -93,6 +93,7 @@ void Viewport::cleanup() {
 
 void Viewport::showEvent(QShowEvent* event) {
     QWidget::showEvent(event);
+    setFocus();
     if (initD3D()) renderTimer->start(16);
 }
 
@@ -157,10 +158,14 @@ void Viewport::updateCamera(float deltaTime) {
     D3DXVec3Cross(&right, &cameraDir, &cameraUp);
     D3DXVec3Normalize(&right, &right);
     float speed = 5.0f * deltaTime;
-    if (pressedKeys.contains(Qt::Key_W)) cameraPos += cameraDir * speed;
+    if (pressedKeys.contains(Qt::Key_W)) {
+        cameraPos += cameraDir * speed;
+        qDebug() << "W pressed, cameraPos:" << cameraPos.x << cameraPos.y << cameraPos.z;
+    }
     if (pressedKeys.contains(Qt::Key_S)) cameraPos -= cameraDir * speed;
     if (pressedKeys.contains(Qt::Key_A)) cameraPos -= right * speed;
     if (pressedKeys.contains(Qt::Key_D)) cameraPos += right * speed;
+
     D3DXMATRIX view;
     D3DXVECTOR3 look = cameraPos + cameraDir;
     D3DXMatrixLookAtLH(&view, &cameraPos, &look, &cameraUp);
@@ -187,18 +192,21 @@ void Viewport::applyCommonRenderStates() {
 void Viewport::render() {
     if (!device || !scene) return;
 
-    updateCamera(0.016f);
+    static QTime time = QTime::currentTime();
+    int msecs = time.elapsed();
+    time.restart();
+    float deltaTime = msecs / 1000.0f;
+
+    updateCamera(deltaTime);
 
     device->Clear(0, nullptr, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER,
         D3DCOLOR_XRGB(30, 30, 30), 1.0f, 0);
 
     if (SUCCEEDED(device->BeginScene())) {
-        // Draw skybox
         if (scene->getSkybox()) {
             float aspect = width() / static_cast<float>(height());
             scene->getSkybox()->render(device, cameraDir, cameraUp, aspect);
         }
-        // Draw objects
         for (const auto& obj : scene->getObjects()) {
             obj->render(device);
         }
@@ -206,5 +214,4 @@ void Viewport::render() {
     }
 
     device->Present(nullptr, nullptr, nullptr, nullptr);
-    // Ensure Qt does not paint over
 }

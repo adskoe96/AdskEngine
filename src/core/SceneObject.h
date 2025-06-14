@@ -39,7 +39,7 @@ public:
 
     virtual void setScaleX(float s) { scale.x = s; emit propertiesChanged(); }
     virtual void setScaleY(float s) { scale.y = s; emit propertiesChanged(); }
-    virtual void setScalenZ(float s) { scale.z = s; emit propertiesChanged(); }
+    virtual void setScaleZ(float s) { scale.z = s; emit propertiesChanged(); }
 
     virtual void invalidateDeviceObjects() {}
     virtual bool restoreDeviceObjects(LPDIRECT3DDEVICE9 device) { return true; }
@@ -47,7 +47,7 @@ public:
 protected:
     D3DXVECTOR3 position{ 0,0,0 };
     D3DXVECTOR3 rotation{ 0,0,0 };
-    D3DXVECTOR3 scale { 0,0,0 };
+    D3DXVECTOR3 scale { 1,1,1 };
 
 signals:
     void propertiesChanged();

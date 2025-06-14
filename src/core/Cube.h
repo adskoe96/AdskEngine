@@ -5,9 +5,10 @@
 
 struct CubeVertex {
     float x, y, z;
+    float nx, ny, nz;
     D3DCOLOR color;
 };
-#define D3DFVF_CUBE (D3DFVF_XYZ | D3DFVF_DIFFUSE)
+#define D3DFVF_CUBE (D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_DIFFUSE)
 
 class Cube : public SceneObject {
     Q_OBJECT

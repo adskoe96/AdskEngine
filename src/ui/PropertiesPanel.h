@@ -39,6 +39,9 @@ private:
     QDoubleSpinBox* rotXSpin;
     QDoubleSpinBox* rotYSpin;
     QDoubleSpinBox* rotZSpin;
+    QDoubleSpinBox* sizeXSpin;
+    QDoubleSpinBox* sizeYSpin;
+    QDoubleSpinBox* sizeZSpin;
 
     QComboBox* lightTypeCombo;
     QDoubleSpinBox* intensitySpin;
