@@ -1,0 +1,46 @@
+# --- CMake ---
+CMakeFiles/
+CMakeCache.txt
+CMakePresets.json
+CMakeUserPresets.json
+cmake_install.cmake
+Makefile
+build-release/
+build/
+build-*/
+libs/
+
+# --- Qt Creator ---
+*.autosave
+*.user
+*.user.*
+.qmake.stash
+
+# --- Qt Resource Compiled Files ---
+qrc_*.cpp
+
+# --- Compiled binaries ---
+*.exe
+*.out
+*.app
+*.dll
+*.so
+*.dylib
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- IDEs ---
+.vs
+.vscode/
+.idea/
+
+# --- Misc ---
+*.log
+*.obj
+*.o
+*.pch
+*.pyc
+*.tmp
+*.swp
