@@ -8,15 +8,13 @@ void Cube::render(LPDIRECT3DDEVICE9 device) {
     if (!restoreDeviceObjects(device)) return;
 
     // Build world matrix: rotation then translation
-    D3DXMATRIX rotX, rotY, rotZ, world;
+    D3DXMATRIX matScale, rotX, rotY, rotZ, trans, world;
+    D3DXMatrixScaling(&matScale, scale.x, scale.y, scale.z);
     D3DXMatrixRotationX(&rotX, rotation.x);
     D3DXMatrixRotationY(&rotY, rotation.y);
     D3DXMatrixRotationZ(&rotZ, rotation.z);
-    world = rotZ * rotY * rotX;
-
-    D3DXMATRIX trans;
     D3DXMatrixTranslation(&trans, position.x, position.y, position.z);
-    world *= trans;
+    world = matScale * rotZ * rotY * rotX * trans;
 
     // Apply world
     D3DXMATRIX oldWorld;

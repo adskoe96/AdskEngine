@@ -79,10 +79,10 @@ void ConsolePanel::appendToConsole(LogType type, const QString& formattedText) {
 
 QString ConsolePanel::logTypeToString(LogType type) const {
     switch (type) {
-    case LogType::Info:    return "INFO";
+    case LogType::Info: return "INFO";
     case LogType::Warning: return "WARNING";
-    case LogType::Error:   return "ERROR";
-    default:              return "UNKNOWN";
+    case LogType::Error: return "ERROR";
+    default: return "UNKNOWN";
     }
 }
 

@@ -80,6 +80,9 @@ EditorWindow::EditorWindow(const QString& projectPath, QWidget* parent)
     connect(sceneHierarchyPanel, &SceneHierarchyPanel::objectSelected,
         propertiesPanel, &PropertiesPanel::onObjectSelected);
 
+    connect(sceneHierarchyPanel, &SceneHierarchyPanel::objectSelected,
+        viewport, &Viewport::onObjectSelected);
+
     auto* bottomSplitter = new QSplitter(Qt::Horizontal);
     verticalSplitter->addWidget(bottomSplitter);
     verticalSplitter->setStretchFactor(1, 2);

@@ -1,4 +1,4 @@
-#include "SceneHierarchyPanel.h"
+﻿#include "SceneHierarchyPanel.h"
 #include "Scene.h"
 #include "SceneObject.h"
 #include <QVBoxLayout>
@@ -21,6 +21,8 @@ SceneHierarchyPanel::SceneHierarchyPanel(Scene* scene, QWidget* parent)
     setStyleSheet("background-color: #2d2d30; color: white;");
     updateHierarchy();
 
+    treeWidget->viewport()->installEventFilter(this);
+
     // selection change
     connect(treeWidget, &QTreeWidget::itemSelectionChanged,
         this, &SceneHierarchyPanel::onItemSelectionChanged);
@@ -30,25 +32,23 @@ SceneHierarchyPanel::SceneHierarchyPanel(Scene* scene, QWidget* parent)
 }
 
 void SceneHierarchyPanel::updateHierarchy() {
-    // remember old selection
     SceneObject* oldObj = nullptr;
     if (auto* oldItem = treeWidget->currentItem()) {
-        oldObj = itemObjectMap.value(oldItem, nullptr);
+        auto ptr = itemObjectMap.value(oldItem);
+        oldObj = ptr.data(); // Получаем сырой указатель из QPointer
     }
 
-    // rebuild tree
     treeWidget->clear();
     itemObjectMap.clear();
     for (const auto& objPtr : scene->getObjects()) {
         auto* it = new QTreeWidgetItem(treeWidget);
         it->setText(0, QString::fromStdString(objPtr->getName()));
-        itemObjectMap[it] = objPtr.get();
+        itemObjectMap[it] = QPointer<SceneObject>(objPtr.get()); // Храним QPointer
     }
 
-    // restore selection if still present
     if (oldObj) {
         for (auto it = itemObjectMap.begin(); it != itemObjectMap.end(); ++it) {
-            if (it.value() == oldObj) {
+            if (it.value().data() == oldObj) {
                 treeWidget->setCurrentItem(it.key());
                 break;
             }
@@ -56,12 +56,29 @@ void SceneHierarchyPanel::updateHierarchy() {
     }
 }
 
+bool SceneHierarchyPanel::eventFilter(QObject* watched, QEvent* ev)
+{
+    if (watched == treeWidget->viewport() && ev->type() == QEvent::MouseButtonPress) {
+        auto* me = static_cast<QMouseEvent*>(ev);
+        if (!treeWidget->itemAt(me->pos())) {
+            treeWidget->clearSelection();
+            return true;
+        }
+    }
+    return QWidget::eventFilter(watched, ev);
+}
+
 void SceneHierarchyPanel::onItemSelectionChanged() {
     auto selectedItems = treeWidget->selectedItems();
     if (!selectedItems.isEmpty()) {
         auto* selectedItem = selectedItems.first();
-        auto obj = itemObjectMap.value(selectedItem, nullptr);
-        emit objectSelected(obj);
+        auto objPtr = itemObjectMap.value(selectedItem); // QPointer<SceneObject>
+        if (objPtr) {
+            emit objectSelected(objPtr.data()); // Передаём только живой объект
+        }
+        else {
+            emit objectSelected(nullptr); // Если объект удалён, передаём nullptr
+        }
     }
     else {
         emit objectSelected(nullptr);
