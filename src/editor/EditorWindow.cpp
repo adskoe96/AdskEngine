@@ -41,7 +41,7 @@ EditorWindow::EditorWindow(const QString& projectPath, QWidget* parent)
     auto* viewport = new Viewport();
     viewport->setScene(scene);
 
-    // Создаем центральный виджет и основной лэйаут
+    // Create the center widget and the main layout
     QWidget* centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
 
@@ -49,16 +49,16 @@ EditorWindow::EditorWindow(const QString& projectPath, QWidget* parent)
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
 
-    // Создаем тулбар и добавляем его в лэйаут
+    // Create a toolbar and add it to the Layout
     auto* toolbar = new Toolbar(scene);
     toolbar->setFixedHeight(40);
     mainLayout->addWidget(toolbar);
 
-    // Подключаем сигнал для открытия настроек окружения
+    // Connect a signal to open the environment settings
     connect(toolbar, &Toolbar::environmentSettingsRequested,
         this, &EditorWindow::openEnvironmentSettings);
 
-    // Создаем сплиттеры и панели
+    // Creating splitters and panels
     auto* verticalSplitter = new QSplitter(Qt::Vertical);
     mainLayout->addWidget(verticalSplitter);
 
@@ -87,10 +87,8 @@ EditorWindow::EditorWindow(const QString& projectPath, QWidget* parent)
     auto* projectPanel = new ProjectPanel(m_projectPath);
     bottomSplitter->addWidget(projectPanel);
 
-    auto* consolePanel = new ConsolePanel();
-    bottomSplitter->addWidget(consolePanel);
-
-    consolePanel->NewLog("Console initialized!\nProject " + projectName + " loaded successful");
+    auto& consolePanel = ConsolePanel::instance(this);
+    bottomSplitter->addWidget(&consolePanel);
 
     connect(scene, &Scene::objectAdded, sceneHierarchyPanel, &SceneHierarchyPanel::updateHierarchy);
 }

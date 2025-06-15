@@ -1,5 +1,6 @@
 #include "Skybox.h"
 #include <qlogging.h>
+#include <ConsolePanel.h>
 
 struct SkyboxVertex {
     float x, y, z;
@@ -15,29 +16,29 @@ Skybox::~Skybox() {
 
 bool Skybox::initialize(LPDIRECT3DDEVICE9 device, const char* texturePath) {
     SkyboxVertex vertices[] = {
-        // Грань +Z
+        // edge +Z
         { -1,  1,  1, 0, 0 }, { 1,  1,  1, 1, 0 }, { 1, -1,  1, 1, 1 },
         { -1,  1,  1, 0, 0 }, { 1, -1,  1, 1, 1 }, { -1, -1,  1, 0, 1 },
-        // Грань -Z
+        // edge -Z
         {  1,  1, -1, 0, 0 }, { -1,  1, -1, 1, 0 }, { -1, -1, -1, 1, 1 },
         {  1,  1, -1, 0, 0 }, { -1, -1, -1, 1, 1 }, {  1, -1, -1, 0, 1 },
-        // Грань +X
+        // edge +X
         {  1,  1,  1, 0, 0 }, {  1,  1, -1, 1, 0 }, {  1, -1, -1, 1, 1 },
         {  1,  1,  1, 0, 0 }, {  1, -1, -1, 1, 1 }, {  1, -1,  1, 0, 1 },
-        // Грань -X
+        // edge -X
         { -1,  1, -1, 0, 0 }, { -1,  1,  1, 1, 0 }, { -1, -1,  1, 1, 1 },
         { -1,  1, -1, 0, 0 }, { -1, -1,  1, 1, 1 }, { -1, -1, -1, 0, 1 },
-        // Грань +Y
+        // edge +Y
         { -1,  1, -1, 0, 0 }, {  1,  1, -1, 1, 0 }, {  1,  1,  1, 1, 1 },
         { -1,  1, -1, 0, 0 }, {  1,  1,  1, 1, 1 }, { -1,  1,  1, 0, 1 },
-        // Грань -Y
+        // edge -Y
         { -1, -1,  1, 0, 0 }, {  1, -1,  1, 1, 0 }, {  1, -1, -1, 1, 1 },
         { -1, -1,  1, 0, 0 }, {  1, -1, -1, 1, 1 }, { -1, -1, -1, 0, 1 },
     };
 
     if (FAILED(device->CreateVertexBuffer(sizeof(vertices), 0, D3DFVF_SKYBOX,
         D3DPOOL_MANAGED, &vertexBuffer, nullptr))) {
-        qDebug("Failed to create vertex buffer");
+        ConsolePanel::sError("Failed to create vertex buffer");
         return false;
     }
 
@@ -48,14 +49,14 @@ bool Skybox::initialize(LPDIRECT3DDEVICE9 device, const char* texturePath) {
 
     if (texturePath && *texturePath) {
         if (FAILED(D3DXCreateTextureFromFileA(device, texturePath, &texture))) {
-            qDebug("Failed to load skybox texture from %d", texturePath);
+            ConsolePanel::sError("Failed to load skybox texture from: " + QString(texturePath));
             return false;
         }
     }
     else {
         // Запасной вариант: белая текстура
         if (FAILED(device->CreateTexture(256, 256, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &texture, nullptr))) {
-            qDebug("Failed to create fallback texture");
+            ConsolePanel::sError("Failed to create fallback texture");
             return false;
         }
         D3DLOCKED_RECT rect;
@@ -91,7 +92,7 @@ void Skybox::render(LPDIRECT3DDEVICE9 device, const D3DXVECTOR3& cameraDir, cons
     device->SetStreamSource(0, vertexBuffer, 0, sizeof(SkyboxVertex));
     device->SetFVF(D3DFVF_SKYBOX);
     device->SetTexture(0, texture);
-    device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, 12); // 6 граней * 2 треугольника
+    device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, 12); // 6 edges * 2 triangles
 
     device->SetRenderState(D3DRS_ZENABLE, TRUE);
     device->SetRenderState(D3DRS_CULLMODE, D3DCULL_CCW);

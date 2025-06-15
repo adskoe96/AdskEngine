@@ -23,11 +23,11 @@ void Cube::render(LPDIRECT3DDEVICE9 device) {
     device->GetTransform(D3DTS_WORLD, &oldWorld);
     device->SetTransform(D3DTS_WORLD, &world);
 
-    // Установка материала
+    // Material installation
     D3DMATERIAL9 mat;
     ZeroMemory(&mat, sizeof(mat));
-    mat.Diffuse = { 1.0f, 1.0f, 1.0f, 1.0f }; // Белый цвет для полного отражения света
-    mat.Ambient = { 0.1f, 0.1f, 0.1f, 1.0f }; // Небольшой фоновый свет
+    mat.Diffuse = { 1.0f, 1.0f, 1.0f, 1.0f }; // White color for complete light reflection
+    mat.Ambient = { 0.1f, 0.1f, 0.1f, 1.0f }; // A little background light
     device->SetMaterial(&mat);
 
     device->SetStreamSource(0, vertexBuffer, 0, sizeof(CubeVertex));
@@ -47,32 +47,32 @@ bool Cube::restoreDeviceObjects(LPDIRECT3DDEVICE9 device) {
     if (!needsRestore || vertexBuffer) return true;
 
     CubeVertex vertices[] = {
-        // Передняя грань (z = -1)
+        // Front edge (z = -1)
         {-1, 1, -1, 0, 0, -1, D3DCOLOR_XRGB(255, 0, 0)},
         {1, 1, -1, 0, 0, -1, D3DCOLOR_XRGB(255, 0, 0)},
         {1, -1, -1, 0, 0, -1, D3DCOLOR_XRGB(255, 0, 0)},
         {-1, -1, -1, 0, 0, -1, D3DCOLOR_XRGB(255, 0, 0)},
-        // Задняя грань (z = 1)
+        // Back edge (z = 1)
         {-1, 1, 1, 0, 0, 1, D3DCOLOR_XRGB(0, 255, 0)},
         {1, 1, 1, 0, 0, 1, D3DCOLOR_XRGB(0, 255, 0)},
         {1, -1, 1, 0, 0, 1, D3DCOLOR_XRGB(0, 255, 0)},
         {-1, -1, 1, 0, 0, 1, D3DCOLOR_XRGB(0, 255, 0)},
-        // Левая грань (x = -1)
+        // Left edge (x = -1)
         {-1, 1, 1, -1, 0, 0, D3DCOLOR_XRGB(0, 0, 255)},
         {-1, 1, -1, -1, 0, 0, D3DCOLOR_XRGB(0, 0, 255)},
         {-1, -1, -1, -1, 0, 0, D3DCOLOR_XRGB(0, 0, 255)},
         {-1, -1, 1, -1, 0, 0, D3DCOLOR_XRGB(0, 0, 255)},
-        // Правая грань (x = 1)
+        // Right edge (x = 1)
         {1, 1, -1, 1, 0, 0, D3DCOLOR_XRGB(255, 255, 0)},
         {1, 1, 1, 1, 0, 0, D3DCOLOR_XRGB(255, 255, 0)},
         {1, -1, 1, 1, 0, 0, D3DCOLOR_XRGB(255, 255, 0)},
         {1, -1, -1, 1, 0, 0, D3DCOLOR_XRGB(255, 255, 0)},
-        // Верхняя грань (y = 1)
+        // Upper edge (y = 1)
         {-1, 1, 1, 0, 1, 0, D3DCOLOR_XRGB(255, 0, 255)},
         {1, 1, 1, 0, 1, 0, D3DCOLOR_XRGB(255, 0, 255)},
         {1, 1, -1, 0, 1, 0, D3DCOLOR_XRGB(255, 0, 255)},
         {-1, 1, -1, 0, 1, 0, D3DCOLOR_XRGB(255, 0, 255)},
-        // Нижняя грань (y = -1)
+        // Bottom edge (y = -1)
         {-1, -1, -1, 0, -1, 0, D3DCOLOR_XRGB(0, 255, 255)},
         {1, -1, -1, 0, -1, 0, D3DCOLOR_XRGB(0, 255, 255)},
         {1, -1, 1, 0, -1, 0, D3DCOLOR_XRGB(0, 255, 255)},

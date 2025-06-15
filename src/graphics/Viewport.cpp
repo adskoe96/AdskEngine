@@ -178,11 +178,11 @@ void Viewport::applyCommonRenderStates() {
     device->SetRenderState(D3DRS_CULLMODE, D3DCULL_CCW);
     device->SetRenderState(D3DRS_LIGHTING, scene->getLightingEnabled() ? TRUE : FALSE);
 
-    // задаём цвет фонового клира
+    // Color of ambient light
     D3DCOLORVALUE amb = scene ? scene->getAmbientColor() : D3DCOLORVALUE{ 0.1f,0.1f,0.1f,1.0f };
     device->SetRenderState(D3DRS_AMBIENT, D3DCOLOR_COLORVALUE(amb.r, amb.g, amb.b, amb.a));
 
-    // Проекцию катаем всегда здесь
+    // Projection
     float aspect = width() / float(height());
     D3DXMATRIX proj;
     D3DXMatrixPerspectiveFovLH(&proj, D3DXToRadian(90), aspect, 0.1f, 100.0f);

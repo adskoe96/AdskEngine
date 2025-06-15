@@ -6,6 +6,9 @@
 #include <QDir>
 #include <QMessageBox>
 #include <fstream>
+#include <QLabel>
+#include <QApplication>
+#include <QStyle>
 #include "EditorWindow.h"
 
 WelcomeWindow::WelcomeWindow(QWidget* parent)
@@ -16,19 +19,44 @@ WelcomeWindow::WelcomeWindow(QWidget* parent)
     central = new QWidget(this);
     QVBoxLayout* layout = new QVBoxLayout(central);
 
+    QPixmap welcomePixmap(":/images/welcomeImage.png");
+
+    QLabel* imageLabel = new QLabel(this);
+    if (!welcomePixmap.isNull()) {
+        welcomePixmap = welcomePixmap.scaled(300, 150, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        imageLabel->setPixmap(welcomePixmap);
+    }
+    else {
+        imageLabel->setText("Welcome to AdskEngine");
+        qWarning() << "Failed to load welcome image from resources";
+    }
+    imageLabel->setAlignment(Qt::AlignCenter);
+
     createButton = new QPushButton("Create New Project");
     openButton = new QPushButton("Open Existing Project");
 
-    layout->addWidget(createButton);
-    layout->addWidget(openButton);
-    layout->setAlignment(Qt::AlignCenter);
+    layout->addStretch(1);
+    layout->addWidget(imageLabel, 0, Qt::AlignCenter);
+    layout->addSpacing(20);
+
+    QWidget* buttonContainer = new QWidget;
+    QHBoxLayout* buttonLayout = new QHBoxLayout(buttonContainer);
+    buttonLayout->addStretch(1);
+    buttonLayout->addWidget(createButton);
+    buttonLayout->addSpacing(20);
+    buttonLayout->addWidget(openButton);
+    buttonLayout->addStretch(1);
+
+    layout->addWidget(buttonContainer);
+    layout->addStretch(1);
 
     connect(createButton, &QPushButton::clicked, this, &WelcomeWindow::onCreateProject);
     connect(openButton, &QPushButton::clicked, this, &WelcomeWindow::onOpenProject);
 
     central->setLayout(layout);
     setCentralWidget(central);
-    resize(400, 200);
+
+    resize(500, 300);
 }
 
 void WelcomeWindow::onCreateProject() {

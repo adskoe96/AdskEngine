@@ -16,6 +16,7 @@ private slots:
     void onOpenProject();
 
 private:
+    QImage* welcomeImage;
     QWidget* central;
     QPushButton* createButton;
     QPushButton* openButton;

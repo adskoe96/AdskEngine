@@ -15,17 +15,17 @@ EnvironmentSettingsWindow::EnvironmentSettingsWindow(Scene* scene, QWidget* pare
 
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
 
-    // Создаем вкладки
+    // Making tabs
     QTabWidget* tabs = new QTabWidget(this);
     mainLayout->addWidget(tabs);
 
-    // Вкладка Skybox
+    // Skybox tab
     setupSkyboxTab(tabs);
 
-    // Вкладка Lighting
+    // Lighting tab
     setupLightingTab(tabs);
 
-    // Кнопки
+    // Buttons
     QHBoxLayout* buttonLayout = new QHBoxLayout();
     QPushButton* applyButton = new QPushButton("Apply");
     QPushButton* cancelButton = new QPushButton("Cancel");
@@ -37,7 +37,6 @@ EnvironmentSettingsWindow::EnvironmentSettingsWindow(Scene* scene, QWidget* pare
     connect(applyButton, &QPushButton::clicked, this, &EnvironmentSettingsWindow::applySettings);
     connect(cancelButton, &QPushButton::clicked, this, &QDialog::reject);
 
-    // Загружаем текущие настройки
     loadCurrentSettings();
 }
 
@@ -45,7 +44,7 @@ void EnvironmentSettingsWindow::setupSkyboxTab(QTabWidget* tabs) {
     QWidget* skyboxTab = new QWidget();
     QVBoxLayout* skyboxLayout = new QVBoxLayout(skyboxTab);
 
-    // Поле пути к текстуре скайбокса
+    // Skybox texture path field
     QHBoxLayout* pathLayout = new QHBoxLayout();
     skyboxLayout->addLayout(pathLayout);
 
@@ -64,7 +63,7 @@ void EnvironmentSettingsWindow::setupLightingTab(QTabWidget* tabs) {
     QWidget* lightingTab = new QWidget();
     QFormLayout* lightingLayout = new QFormLayout(lightingTab);
 
-    // Тип освещения
+    // Type of lighting
     lightTypeCombo = new QComboBox();
     lightTypeCombo->addItem("Directional", QVariant(0));
     lightTypeCombo->addItem("Point", QVariant(1));
@@ -73,18 +72,18 @@ void EnvironmentSettingsWindow::setupLightingTab(QTabWidget* tabs) {
     connect(lightTypeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
         this, &EnvironmentSettingsWindow::onLightTypeChanged);
 
-    // Цвет окружающего освещения
+    // Color of ambient light
     ambientColorButton = new QPushButton();
     ambientColorButton->setFixedSize(30, 30);
     lightingLayout->addRow("Ambient Color:", ambientColorButton);
     connect(ambientColorButton, &QPushButton::clicked, this, &EnvironmentSettingsWindow::onAmbientColorChange);
 
-    // Интенсивность света
+    // Light intensity
     lightIntensityEdit = new QLineEdit();
     lightIntensityEdit->setValidator(new QDoubleValidator(0.0, 10.0, 2, this));
     lightingLayout->addRow("Light Intensity:", lightIntensityEdit);
 
-    // Тени
+    // Shadows
     shadowsCheckbox = new QCheckBox("Enable Shadows");
     lightingLayout->addRow(shadowsCheckbox);
 
@@ -97,10 +96,10 @@ void EnvironmentSettingsWindow::setupLightingTab(QTabWidget* tabs) {
 void EnvironmentSettingsWindow::loadCurrentSettings() {
     if (!scene) return;
 
-    // Загрузка настроек скайбокса
+    // Loading skybox settings
     skyboxPathEdit->setText(QString::fromStdString(scene->getSkyboxPath()));
 
-    // Загрузка настроек освещения
+    // Loading lighting settings
     const D3DCOLORVALUE& ambient = scene->getAmbientColor();
     ambientColor = QColor::fromRgbF(ambient.r, ambient.g, ambient.b);
     ambientColorButton->setStyleSheet(QString("background-color: %1").arg(ambientColor.name()));
@@ -145,10 +144,10 @@ void EnvironmentSettingsWindow::applySettings() {
         scene->setSkyboxPath(newPath);
     }
 
-    // Применяем настройки скайбокса
+    // Applying skybox settings
     scene->setSkyboxPath(skyboxPathEdit->text().toStdString());
 
-    // Применяем настройки освещения
+    // Applying the lighting settings
     D3DCOLORVALUE ambient;
     ambient.r = ambientColor.redF();
     ambient.g = ambientColor.greenF();
@@ -160,6 +159,6 @@ void EnvironmentSettingsWindow::applySettings() {
     scene->setShadowsEnabled(shadowsCheckbox->isChecked());
     scene->setLightingEnabled(lightingCheckbox->isChecked());
 
-    // Закрываем окно
+    // Closing window
     accept();
 }

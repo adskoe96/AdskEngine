@@ -10,9 +10,6 @@ Light::Light(QObject* parent)
 }
 
 void Light::render(LPDIRECT3DDEVICE9 device) {
-    // Enable lighting for this draw
-    //device->SetRenderState(D3DRS_LIGHTING, TRUE);
-
     D3DLIGHT9 L{};
     L.Type = (type == LightType::Directional) ? D3DLIGHT_DIRECTIONAL :
         (type == LightType::Point) ? D3DLIGHT_POINT : D3DLIGHT_SPOT;
@@ -40,7 +37,4 @@ void Light::render(LPDIRECT3DDEVICE9 device) {
     }
     device->SetLight(lightIndex, &L);
     device->LightEnable(lightIndex, TRUE);
-
-    // disable lighting again for other objects
-    //device->SetRenderState(D3DRS_LIGHTING, FALSE);
 }

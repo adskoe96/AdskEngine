@@ -9,12 +9,16 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 find_package(dxsdk-d3dx CONFIG REQUIRED)
 find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
 
+set(RESOURCES_DIR "${CMAKE_SOURCE_DIR}/assets")
+qt5_add_resources(RESOURCES_CPP "${RESOURCES_DIR}/resources.qrc")
+
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/src/*.cpp"
     "${CMAKE_SOURCE_DIR}/src/*.h"
 )
 
 include_directories(
+    ${CMAKE_SOURCE_DIR}/src/enum
     ${CMAKE_SOURCE_DIR}/src/core
     ${CMAKE_SOURCE_DIR}/src/render
     ${CMAKE_SOURCE_DIR}/src/graphics

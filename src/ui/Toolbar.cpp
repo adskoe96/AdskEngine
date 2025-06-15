@@ -15,10 +15,10 @@ Toolbar::Toolbar(Scene* scene, QWidget* parent)
     auto* layout = new QHBoxLayout(this);
     layout->setContentsMargins(4, 4, 4, 4);
 
-    // Сохраняем указатель на сцену в локальной переменной для явного захвата
+    // Save the scene pointer in a local variable for explicit capture
     Scene* scenePtr = this->scene;
 
-    // Кнопка создания объектов с выпадающим меню
+    // Object creation button with drop-down menu
     QToolButton* createButton = new QToolButton();
     createButton->setText("Create");
     createButton->setPopupMode(QToolButton::InstantPopup);
@@ -40,11 +40,11 @@ Toolbar::Toolbar(Scene* scene, QWidget* parent)
     createButton->setMenu(createMenu);
     layout->addWidget(createButton);
 
-    // Кнопка Play
+    // Play button
     QPushButton* playButton = new QPushButton("Play");
     layout->addWidget(playButton);
 
-    // Кнопка настроек окружения
+    // Environment settings button
     QPushButton* envSettingsButton = new QPushButton("Environment Settings");
     layout->addWidget(envSettingsButton);
     connect(envSettingsButton, &QPushButton::clicked, [this]() {

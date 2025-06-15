@@ -5,6 +5,8 @@
 #include <QFile>
 #include "Cube.h"
 #include "Light.h"
+#include <ConsolePanel.h>
+#include <QApplication>
 
 Scene::Scene(QObject* parent)
     : QObject(parent)
@@ -23,7 +25,7 @@ bool Scene::initializeSkybox(LPDIRECT3DDEVICE9 device) {
     if (skyboxInitialized)
         return true;
     if (!skybox->initialize(device, skyboxPath.c_str())) {
-        qDebug("Failed to initialize skybox");
+        ConsolePanel::sError("Failed to initialize skybox");
         return false;
     }
     skyboxInitialized = true;
@@ -43,7 +45,7 @@ void Scene::addObject(std::unique_ptr<SceneObject> object) {
 void Scene::removeObject(SceneObject* object)
 {
     std::lock_guard<std::mutex> lock(sceneMutex);
-    // Найти и удалить из вектора
+    // Find and remove from the vector
     auto it = std::find_if(objects.begin(), objects.end(),
         [&](const std::unique_ptr<SceneObject>& ptr) { return ptr.get() == object; });
     if (it != objects.end()) {
@@ -110,6 +112,8 @@ void Scene::saveToFile(const QString& filePath) {
     if (f.open(QIODevice::WriteOnly)) {
         f.write(QJsonDocument(root).toJson());
     }
+
+    ConsolePanel::sInfo("Scene saved to: " + filePath);
 }
 
 void Scene::loadFromFile(const QString& filePath) {
@@ -144,4 +148,6 @@ void Scene::loadFromFile(const QString& filePath) {
             addObject(std::move(obj));
         }
     }
+
+    ConsolePanel::sInfo("Scene loaded from: " + filePath);
 }
