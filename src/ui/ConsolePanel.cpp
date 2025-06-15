@@ -47,26 +47,28 @@ void ConsolePanel::log(LogType type, const QString& text) {
         .arg(logTypeToString(type))
         .arg(text);
 
-    QMetaObject::invokeMethod(this, [this, formattedLog]() {
-        appendToConsole(formattedLog);
+    QMetaObject::invokeMethod(this, [this, type, formattedLog]() {
+        appendToConsole(type, formattedLog);
         }, Qt::QueuedConnection);
 }
 
-void ConsolePanel::appendToConsole(const QString& formattedText) {
+void ConsolePanel::appendToConsole(LogType type, const QString& formattedText) {
     QTextCharFormat format;
 
-    if (formattedText.contains("[ERROR]")) {
+    switch (type) {
+    case LogType::Error:
         format.setForeground(QColor(255, 100, 100));
         format.setFontWeight(QFont::Bold);
-    }
-    else if (formattedText.contains("[WARNING]")) {
+        break;
+    case LogType::Warning:
         format.setForeground(QColor(255, 200, 50));
-    }
-    else if (formattedText.contains("[INFO]")) {
+        break;
+    case LogType::Info:
         format.setForeground(QColor(100, 200, 255));
-    }
-    else {
+        break;
+    default:
         format.setForeground(consoleOutput->palette().text().color());
+        break;
     }
 
     QTextCursor cursor(consoleOutput->document());

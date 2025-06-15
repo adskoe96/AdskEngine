@@ -30,7 +30,7 @@ private:
     ~ConsolePanel() = default;
 
     QString logTypeToString(LogType type) const;
-    void appendToConsole(const QString& formattedText);
+    void appendToConsole(LogType type, const QString& formattedText);
 
     QTextEdit* consoleOutput;
     QPushButton* clearButton;
