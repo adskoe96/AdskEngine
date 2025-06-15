@@ -3,6 +3,7 @@
 #include <QMouseEvent>
 #include <algorithm>
 #include <QDebug>
+#include <ConsolePanel.h>
 
 Viewport::Viewport(QWidget* parent)
     : QWidget(parent)
@@ -61,6 +62,26 @@ bool Viewport::initD3D() {
         return false;
     }
 
+    if (cameraInitialized) {
+        D3DXMATRIX view;
+        D3DXVECTOR3 lookAt = cameraPos + cameraDir;
+        D3DXMatrixLookAtLH(&view, &cameraPos, &lookAt, &cameraUp);
+        device->SetTransform(D3DTS_VIEW, &view);
+    }
+    else {
+        // Initial camera parameters
+        cameraPos = { 0,0,-5 };
+        cameraDir = { 0,0,1 };
+        cameraUp = { 0,1,0 };
+
+        D3DXMATRIX view;
+        D3DXVECTOR3 lookAt = cameraPos + cameraDir;
+        D3DXMatrixLookAtLH(&view, &cameraPos, &lookAt, &cameraUp);
+        device->SetTransform(D3DTS_VIEW, &view);
+
+        cameraInitialized = true;
+    }
+
     // Setup render states
     device->SetRenderState(D3DRS_ZENABLE, TRUE);
     device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
@@ -80,13 +101,21 @@ bool Viewport::initD3D() {
 
     // Initialize and restore scene objects and skybox
     if (scene) {
-        scene->initializeSkybox(device);
         scene->restoreDeviceObjects(device);
-        // Ambient and lighting
+        scene->updateSkybox(device);
+
+        // Ambient и lighting
         D3DCOLORVALUE ambient = scene->getAmbientColor();
         device->SetRenderState(D3DRS_AMBIENT, D3DCOLOR_COLORVALUE(
             ambient.r, ambient.g, ambient.b, ambient.a));
         device->SetRenderState(D3DRS_SHADEMODE, D3DSHADE_GOURAUD);
+
+        scene->clearLightingDirty();
+        scene->clearSkyboxDirty();
+    }
+
+    if (FAILED(D3DXCreateLine(device, &gizmoLine))) {
+        ConsolePanel::sLog(LogType::Error, "Failed to create D3DX line");
     }
 
     D3DXCreateLine(device, &gizmoLine);
@@ -114,6 +143,13 @@ void Viewport::resizeEvent(QResizeEvent* event) {
     QWidget::resizeEvent(event);
     if (!device) return;
 
+    bool wasCameraInitialized = cameraInitialized;
+    D3DXVECTOR3 savedCameraPos = cameraPos;
+    D3DXVECTOR3 savedCameraDir = cameraDir;
+    D3DXVECTOR3 savedCameraUp = cameraUp;
+    float savedYaw = yaw;
+    float savedPitch = pitch;
+
     if (gizmoLine) {
         gizmoLine->Release();
         gizmoLine = nullptr;
@@ -131,14 +167,34 @@ void Viewport::resizeEvent(QResizeEvent* event) {
 
     HRESULT hr = device->Reset(&d3dpp);
     if (FAILED(hr)) {
-        qDebug() << "Device reset failed!";
+        ConsolePanel::sLog(LogType::Error, "Device reset failed!");
         renderTimer->stop();
         cleanup();
         return;
     }
 
+    if (wasCameraInitialized) {
+        cameraPos = savedCameraPos;
+        cameraDir = savedCameraDir;
+        cameraUp = savedCameraUp;
+        yaw = savedYaw;
+        pitch = savedPitch;
+
+        D3DXMATRIX view;
+        D3DXVECTOR3 lookAt = cameraPos + cameraDir;
+        D3DXMatrixLookAtLH(&view, &cameraPos, &lookAt, &cameraUp);
+        device->SetTransform(D3DTS_VIEW, &view);
+    }
+
     applyCommonRenderStates();
-    if (scene) scene->restoreDeviceObjects(device);
+    if (scene) {
+        scene->restoreDeviceObjects(device);
+        scene->updateSkybox(device);
+    }
+
+    if (FAILED(D3DXCreateLine(device, &gizmoLine))) {
+        ConsolePanel::sLog(LogType::Error, "Failed to recreate D3DX line after resize");
+    }
     D3DXCreateLine(device, &gizmoLine);
 }
 
@@ -245,8 +301,9 @@ void Viewport::applyCommonRenderStates() {
     device->SetRenderState(D3DRS_LIGHTING, scene->getLightingEnabled() ? TRUE : FALSE);
 
     // Color of ambient light
-    D3DCOLORVALUE amb = scene ? scene->getAmbientColor() : D3DCOLORVALUE{ 0.1f,0.1f,0.1f,1.0f };
-    device->SetRenderState(D3DRS_AMBIENT, D3DCOLOR_COLORVALUE(amb.r, amb.g, amb.b, amb.a));
+    D3DCOLORVALUE ambient = scene->getAmbientColor();
+    device->SetRenderState(D3DRS_AMBIENT, D3DCOLOR_COLORVALUE(
+        ambient.r, ambient.g, ambient.b, ambient.a));
 
     // Projection
     float aspect = width() / float(height());
@@ -296,6 +353,23 @@ D3DXVECTOR3 Viewport::ProjectPointOnLine(const D3DXVECTOR3& rayO, const D3DXVECT
 void Viewport::render() {
     if (!device || !scene) return;
 
+    // Обновляем Skybox при необходимости
+    if (scene->isSkyboxDirty()) {
+        scene->updateSkybox(device);
+        scene->clearSkyboxDirty();
+    }
+
+    // Обновляем настройки освещения
+    if (scene->isLightingDirty()) {
+        device->SetRenderState(D3DRS_LIGHTING, scene->getLightingEnabled() ? TRUE : FALSE);
+
+        D3DCOLORVALUE ambient = scene->getAmbientColor();
+        device->SetRenderState(D3DRS_AMBIENT, D3DCOLOR_COLORVALUE(
+            ambient.r, ambient.g, ambient.b, ambient.a));
+
+        scene->clearLightingDirty();
+    }
+
     HRESULT hr = device->TestCooperativeLevel();
     if (hr == D3DERR_DEVICELOST) {
         return;
@@ -320,8 +394,34 @@ void Viewport::render() {
 
     if (SUCCEEDED(device->BeginScene())) {
         if (scene->getSkybox()) {
+            D3DXMATRIX savedView, savedProj;
+            device->GetTransform(D3DTS_VIEW, &savedView);
+            device->GetTransform(D3DTS_PROJECTION, &savedProj);
+
+            DWORD zEnable, cullMode;
+            device->GetRenderState(D3DRS_ZENABLE, &zEnable);
+            device->GetRenderState(D3DRS_CULLMODE, &cullMode);
+
+            device->SetRenderState(D3DRS_ZENABLE, FALSE);
+            device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
+
+            D3DXMATRIX skyboxView;
+            D3DXVECTOR3 eye(0, 0, 0);
+            D3DXVECTOR3 at = eye + cameraDir;
+            D3DXMatrixLookAtLH(&skyboxView, &eye, &at, &cameraUp);
+            device->SetTransform(D3DTS_VIEW, &skyboxView);
+
             float aspect = width() / static_cast<float>(height());
-            scene->getSkybox()->render(device, cameraDir, cameraUp, aspect);
+            D3DXMATRIX skyboxProj;
+            D3DXMatrixPerspectiveFovLH(&skyboxProj, D3DXToRadian(90), aspect, 0.1f, 100.0f);
+            device->SetTransform(D3DTS_PROJECTION, &skyboxProj);
+
+            scene->getSkybox()->draw(device);
+
+            device->SetTransform(D3DTS_VIEW, &savedView);
+            device->SetTransform(D3DTS_PROJECTION, &savedProj);
+            device->SetRenderState(D3DRS_ZENABLE, zEnable);
+            device->SetRenderState(D3DRS_CULLMODE, cullMode);
         }
         for (const auto& obj : scene->getObjects()) {
             obj->render(device);

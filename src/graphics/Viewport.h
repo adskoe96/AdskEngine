@@ -60,6 +60,7 @@ private:
     D3DXVECTOR3 cameraDir;
     D3DXVECTOR3 cameraUp;
     float yaw = 0.0f, pitch = 0.0f;
+    bool cameraInitialized = false;
 
     // Input
     bool rightMouseHeld = false;

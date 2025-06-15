@@ -8,8 +8,8 @@ public:
     ~Skybox();
 
     bool initialize(LPDIRECT3DDEVICE9 device, const char* texturePath);
-    void render(LPDIRECT3DDEVICE9 device, const D3DXVECTOR3& cameraDir, const D3DXVECTOR3& cameraUp, float aspectRatio);
     void cleanup();
+    void draw(LPDIRECT3DDEVICE9 device);
 
 private:
     LPDIRECT3DVERTEXBUFFER9 vertexBuffer = nullptr;

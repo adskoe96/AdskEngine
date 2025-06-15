@@ -137,17 +137,11 @@ void EnvironmentSettingsWindow::onLightTypeChanged(int index) {
 void EnvironmentSettingsWindow::applySettings() {
     if (!scene) return;
 
-    std::string oldPath = scene->getSkyboxPath();
     std::string newPath = skyboxPathEdit->text().toStdString();
-
-    if (oldPath != newPath) {
+    if (scene->getSkyboxPath() != newPath) {
         scene->setSkyboxPath(newPath);
     }
 
-    // Applying skybox settings
-    scene->setSkyboxPath(skyboxPathEdit->text().toStdString());
-
-    // Applying the lighting settings
     D3DCOLORVALUE ambient;
     ambient.r = ambientColor.redF();
     ambient.g = ambientColor.greenF();
@@ -159,6 +153,7 @@ void EnvironmentSettingsWindow::applySettings() {
     scene->setShadowsEnabled(shadowsCheckbox->isChecked());
     scene->setLightingEnabled(lightingCheckbox->isChecked());
 
-    // Closing window
+    emit settingsChanged();
+
     accept();
 }

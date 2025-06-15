@@ -54,7 +54,6 @@ bool Skybox::initialize(LPDIRECT3DDEVICE9 device, const char* texturePath) {
         }
     }
     else {
-        // Запасной вариант: белая текстура
         if (FAILED(device->CreateTexture(256, 256, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &texture, nullptr))) {
             ConsolePanel::sError("Failed to create fallback texture");
             return false;
@@ -71,31 +70,13 @@ bool Skybox::initialize(LPDIRECT3DDEVICE9 device, const char* texturePath) {
     return true;
 }
 
-void Skybox::render(LPDIRECT3DDEVICE9 device, const D3DXVECTOR3& cameraDir, const D3DXVECTOR3& cameraUp, float aspectRatio) {
+void Skybox::draw(LPDIRECT3DDEVICE9 device) {
     if (!vertexBuffer || !texture) return;
-
-    device->SetRenderState(D3DRS_ZENABLE, FALSE);
-    device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
-
-    D3DXMATRIX world, view, proj;
-    D3DXMatrixIdentity(&world);
-    device->SetTransform(D3DTS_WORLD, &world);
-
-    D3DXMatrixPerspectiveFovLH(&proj, D3DXToRadian(90), aspectRatio, 0.1f, 100.0f);
-    device->SetTransform(D3DTS_PROJECTION, &proj);
-
-    D3DXVECTOR3 eye(0, 0, 0);
-    D3DXVECTOR3 at = eye + cameraDir;
-    D3DXMatrixLookAtLH(&view, &eye, &at, &cameraUp);
-    device->SetTransform(D3DTS_VIEW, &view);
 
     device->SetStreamSource(0, vertexBuffer, 0, sizeof(SkyboxVertex));
     device->SetFVF(D3DFVF_SKYBOX);
     device->SetTexture(0, texture);
-    device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, 12); // 6 edges * 2 triangles
-
-    device->SetRenderState(D3DRS_ZENABLE, TRUE);
-    device->SetRenderState(D3DRS_CULLMODE, D3DCULL_CCW);
+    device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, 12);
 }
 
 void Skybox::cleanup() {

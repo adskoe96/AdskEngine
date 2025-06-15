@@ -15,21 +15,10 @@ Scene::Scene(QObject* parent)
     ambientColor.g = 0.2f;
     ambientColor.b = 0.2f;
     ambientColor.a = 1.0f;
-
-    skybox = std::make_unique<Skybox>();
 }
 
-Scene::~Scene() = default;
-
-bool Scene::initializeSkybox(LPDIRECT3DDEVICE9 device) {
-    if (skyboxInitialized)
-        return true;
-    if (!skybox->initialize(device, skyboxPath.c_str())) {
-        ConsolePanel::sError("Failed to initialize skybox");
-        return false;
-    }
-    skyboxInitialized = true;
-    return true;
+Scene::~Scene() {
+    invalidateDeviceObjects();
 }
 
 void Scene::addObject(std::unique_ptr<SceneObject> object) {
@@ -42,12 +31,12 @@ void Scene::addObject(std::unique_ptr<SceneObject> object) {
     emit objectPropertiesChanged();
 }
 
-void Scene::removeObject(SceneObject* object)
-{
+void Scene::removeObject(SceneObject* object) {
     std::lock_guard<std::mutex> lock(sceneMutex);
-    // Find and remove from the vector
     auto it = std::find_if(objects.begin(), objects.end(),
-        [&](const std::unique_ptr<SceneObject>& ptr) { return ptr.get() == object; });
+        [&](const std::unique_ptr<SceneObject>& ptr) {
+            return ptr.get() == object;
+        });
     if (it != objects.end()) {
         objects.erase(it);
         emit objectRemoved(object);
@@ -69,16 +58,20 @@ const std::vector<std::unique_ptr<SceneObject>>& Scene::getObjects() const {
 void Scene::invalidateDeviceObjects() {
     if (skybox) {
         skybox->cleanup();
+        skybox.reset();
     }
+
     for (const auto& obj : objects) {
         obj->invalidateDeviceObjects();
     }
+
+    skyboxInitialized = false;
 }
 
 void Scene::restoreDeviceObjects(LPDIRECT3DDEVICE9 device) {
-    if (skybox) {
-        skybox->initialize(device, skyboxPath.c_str());
-    }
+    // Skybox will be reloaded in updateSkybox()
+    skyboxDirty = true;
+
     for (const auto& obj : objects) {
         obj->restoreDeviceObjects(device);
     }
@@ -120,6 +113,7 @@ void Scene::loadFromFile(const QString& filePath) {
     QFile f(filePath);
     if (!f.open(QIODevice::ReadOnly))
         return;
+
     auto doc = QJsonDocument::fromJson(f.readAll());
     auto root = doc.object();
 
@@ -128,6 +122,7 @@ void Scene::loadFromFile(const QString& filePath) {
     ambientColor.g = ambient["g"].toDouble();
     ambientColor.b = ambient["b"].toDouble();
     ambientColor.a = ambient["a"].toDouble();
+
     lightIntensity = root["lightIntensity"].toDouble();
     shadowsEnabled = root["shadowsEnabled"].toBool();
     lightingEnabled = root["lightingEnabled"].toBool();
@@ -149,5 +144,33 @@ void Scene::loadFromFile(const QString& filePath) {
         }
     }
 
+    // Mark for reload
+    skyboxDirty = true;
+    lightingDirty = true;
+
     ConsolePanel::sInfo("Scene loaded from: " + filePath);
+}
+
+void Scene::updateSkybox(LPDIRECT3DDEVICE9 device) {
+    if (skyboxDirty) {
+        // Release old skybox
+        if (skybox) {
+            skybox->cleanup();
+            skybox.reset();
+        }
+
+        // Load new skybox if path is valid
+        if (!skyboxPath.empty()) {
+            skybox = std::make_unique<Skybox>();
+            if (skybox->initialize(device, skyboxPath.c_str())) {
+                skyboxInitialized = true;
+            }
+            else {
+                ConsolePanel::sError("Failed to initialize skybox");
+                skybox.reset();
+            }
+        }
+
+        skyboxDirty = false;
+    }
 }

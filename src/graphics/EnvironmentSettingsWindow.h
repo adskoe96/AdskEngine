@@ -17,6 +17,9 @@ public:
 public slots:
     void applySettings();
 
+signals:
+    void settingsChanged();
+
 private slots:
     void onSkyboxBrowse();
     void onAmbientColorChange();
