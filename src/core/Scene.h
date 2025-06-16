@@ -6,6 +6,7 @@
 #include <mutex>
 #include <d3d9.h>
 #include <QJsonObject>
+#include "MeshRenderer.h"
 #include "SceneObject.h"
 #include "Skybox.h"
 

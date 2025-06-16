@@ -130,7 +130,6 @@ void EnvironmentSettingsWindow::onAmbientColorChange() {
 }
 
 void EnvironmentSettingsWindow::onLightTypeChanged(int index) {
-    // Реализуйте логику изменения типа освещения при необходимости
     Q_UNUSED(index);
 }
 

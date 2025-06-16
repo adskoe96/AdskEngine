@@ -3,8 +3,8 @@
 #include <QJsonArray>
 #include <QDebug>
 #include <QFile>
-#include "Cube.h"
 #include "Light.h"
+#include "MeshRenderer.h"
 #include <ConsolePanel.h>
 #include <QApplication>
 
@@ -90,16 +90,45 @@ void Scene::saveToFile(const QString& filePath) {
     root["lightingEnabled"] = lightingEnabled;
     root["skyboxPath"] = QString::fromStdString(skyboxPath);
 
-    QJsonArray arr;
-    for (const auto& obj : objects) {
+    QJsonArray objArray;
+    for (const auto& objPtr : objects) {
+        SceneObject* obj = objPtr.get();
         QJsonObject o;
-        o["id"] = int(obj->getId());
-        o["posX"] = obj->getPositionX();
-        o["posY"] = obj->getPositionY();
-        o["posZ"] = obj->getPositionZ();
-        arr.append(o);
+
+        // Always Transform
+        if (auto* tr = obj->getComponent<Transform>()) {
+            QJsonObject jsTr;
+            jsTr["posX"] = tr->position.x;
+            jsTr["posY"] = tr->position.y;
+            jsTr["posZ"] = tr->position.z;
+            jsTr["rotX"] = tr->rotation.x;
+            jsTr["rotY"] = tr->rotation.y;
+            jsTr["rotZ"] = tr->rotation.z;
+            jsTr["scaleX"] = tr->scale.x;
+            jsTr["scaleY"] = tr->scale.y;
+            jsTr["scaleZ"] = tr->scale.z;
+            o["Transform"] = jsTr;
+        }
+
+        // MeshRenderer?
+        if (obj->getComponent<MeshRenderer>()) {
+            o["MeshRenderer"] = true;
+        }
+
+        // Light?
+        if (auto* light = obj->getComponent<Light>()) {
+            QJsonObject jsL;
+            jsL["type"] = int(light->type);
+            jsL["intensity"] = light->intensity;
+            jsL["colorR"] = light->color.r;
+            jsL["colorG"] = light->color.g;
+            jsL["colorB"] = light->color.b;
+            o["Light"] = jsL;
+        }
+
+        objArray.append(o);
     }
-    root["objects"] = arr;
+    root["objects"] = objArray;
 
     QFile f(filePath);
     if (f.open(QIODevice::WriteOnly)) {
@@ -129,19 +158,44 @@ void Scene::loadFromFile(const QString& filePath) {
     skyboxPath = root["skyboxPath"].toString().toStdString();
 
     objects.clear();
-    QJsonArray arr = root["objects"].toArray();
-    for (auto v : arr) {
-        auto o = v.toObject();
-        int id = o["id"].toInt();
-        std::unique_ptr<SceneObject> obj;
-        if (id == 1) obj = std::make_unique<Cube>(this);
-        else if (id == 2) obj = std::make_unique<Light>(this);
-        if (obj) {
-            obj->setPositionX(o["posX"].toDouble());
-            obj->setPositionY(o["posY"].toDouble());
-            obj->setPositionZ(o["posZ"].toDouble());
-            addObject(std::move(obj));
+    QJsonArray objArray = root["objects"].toArray();
+    for (auto v : objArray) {
+        auto jsObj = v.toObject();
+        auto newObj = std::make_unique<SceneObject>("Entity");
+
+        // Transform
+        if (jsObj.contains("Transform")) {
+            auto jsTr = jsObj["Transform"].toObject();
+            auto* tr = newObj->getComponent<Transform>();
+            tr->position.x = jsTr["posX"].toDouble();
+            tr->position.y = jsTr["posY"].toDouble();
+            tr->position.z = jsTr["posZ"].toDouble();
+            tr->rotation.x = jsTr["rotX"].toDouble();
+            tr->rotation.y = jsTr["rotY"].toDouble();
+            tr->rotation.z = jsTr["rotZ"].toDouble();
+            tr->scale.x = jsTr["scaleX"].toDouble();
+            tr->scale.y = jsTr["scaleY"].toDouble();
+            tr->scale.z = jsTr["scaleZ"].toDouble();
         }
+
+        // MeshRenderer
+        if (jsObj.contains("MeshRenderer") && jsObj["MeshRenderer"].toBool()) {
+            newObj->addComponent<MeshRenderer>();
+        }
+
+        // Light
+        if (jsObj.contains("Light")) {
+            auto jsL = jsObj["Light"].toObject();
+            auto* light = newObj->addComponent<Light>();
+            light->type = LightType(jsL["type"].toInt());
+            light->intensity = jsL["intensity"].toDouble();
+            light->color.r = jsL["colorR"].toDouble();
+            light->color.g = jsL["colorG"].toDouble();
+            light->color.b = jsL["colorB"].toDouble();
+            light->color.a = 1.0f;
+        }
+
+        addObject(std::move(newObj));
     }
 
     // Mark for reload

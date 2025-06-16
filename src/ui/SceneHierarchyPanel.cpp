@@ -35,7 +35,7 @@ void SceneHierarchyPanel::updateHierarchy() {
     SceneObject* oldObj = nullptr;
     if (auto* oldItem = treeWidget->currentItem()) {
         auto ptr = itemObjectMap.value(oldItem);
-        oldObj = ptr.data(); // Получаем сырой указатель из QPointer
+        oldObj = ptr.data();
     }
 
     treeWidget->clear();
@@ -43,7 +43,7 @@ void SceneHierarchyPanel::updateHierarchy() {
     for (const auto& objPtr : scene->getObjects()) {
         auto* it = new QTreeWidgetItem(treeWidget);
         it->setText(0, QString::fromStdString(objPtr->getName()));
-        itemObjectMap[it] = QPointer<SceneObject>(objPtr.get()); // Храним QPointer
+        itemObjectMap[it] = QPointer<SceneObject>(objPtr.get());
     }
 
     if (oldObj) {
@@ -74,10 +74,10 @@ void SceneHierarchyPanel::onItemSelectionChanged() {
         auto* selectedItem = selectedItems.first();
         auto objPtr = itemObjectMap.value(selectedItem); // QPointer<SceneObject>
         if (objPtr) {
-            emit objectSelected(objPtr.data()); // Передаём только живой объект
+            emit objectSelected(objPtr.data()); // We're only transferring a live object
         }
         else {
-            emit objectSelected(nullptr); // Если объект удалён, передаём nullptr
+            emit objectSelected(nullptr); // If the object is deleted, pass nullptr
         }
     }
     else {

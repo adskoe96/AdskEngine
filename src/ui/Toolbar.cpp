@@ -5,9 +5,9 @@
 #include <QMenu>
 #include <QAction>
 #include "Scene.h"
-#include "Cube.h"
 #include "Light.h"
 #include <QFileDialog>
+#include <MeshRenderer.h>
 
 Toolbar::Toolbar(Scene* scene, QWidget* parent)
     : QWidget(parent), scene(scene)
@@ -27,13 +27,17 @@ Toolbar::Toolbar(Scene* scene, QWidget* parent)
 
     QAction* createLightAction = new QAction("Light", this);
     connect(createLightAction, &QAction::triggered, [scenePtr]() {
-        scenePtr->addObject(std::make_unique<Light>());
+        auto obj = std::make_unique<SceneObject>("Light");
+        auto* light = obj->addComponent<Light>();
+        scenePtr->addObject(std::move(obj));
         });
     createMenu->addAction(createLightAction);
 
-    QAction* createCubeAction = new QAction("Cube", this);
+    QAction* createCubeAction = new QAction("Mesh", this);
     connect(createCubeAction, &QAction::triggered, [scenePtr]() {
-        scenePtr->addObject(std::make_unique<Cube>());
+        auto obj = std::make_unique<SceneObject>("Mesh");
+        obj->addComponent<MeshRenderer>();
+        scenePtr->addObject(std::move(obj));
         });
     createMenu->addAction(createCubeAction);
 

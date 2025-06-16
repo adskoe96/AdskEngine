@@ -20,6 +20,7 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
 include_directories(
     ${CMAKE_SOURCE_DIR}/src/enum
     ${CMAKE_SOURCE_DIR}/src/core
+    ${CMAKE_SOURCE_DIR}/src/components
     ${CMAKE_SOURCE_DIR}/src/render
     ${CMAKE_SOURCE_DIR}/src/graphics
     ${CMAKE_SOURCE_DIR}/src/ui

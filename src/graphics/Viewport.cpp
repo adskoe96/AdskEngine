@@ -207,9 +207,10 @@ void Viewport::mousePressEvent(QMouseEvent* ev) {
         D3DXVECTOR3 rayO, rayD;
         BuildPickingRay(ev->pos(), rayO, rayD);
 
-        D3DXVECTOR3 origin(selectedObject->getPositionX(),
-            selectedObject->getPositionY(),
-            selectedObject->getPositionZ());
+        auto* tr = selectedObject->getComponent<Transform>();
+        if (!tr) return;
+
+        D3DXVECTOR3 origin = tr->position;
         struct AxisLine { D3DXVECTOR3 dir; DragAxis axis; };
         AxisLine axes[3] = {
             {{1,0,0}, DragAxis::X},
@@ -254,9 +255,11 @@ void Viewport::mouseMoveEvent(QMouseEvent* ev) {
         D3DXVECTOR3 currentOnAxis = ProjectPointOnLine(rayO, rayD, objStartPos, dragAxisDir);
         D3DXVECTOR3 delta = currentOnAxis - dragStartWorld;
         D3DXVECTOR3 newPos = objStartPos + delta;
-        selectedObject->setPositionX(newPos.x);
-        selectedObject->setPositionY(newPos.y);
-        selectedObject->setPositionZ(newPos.z);
+        auto* tr = selectedObject->getComponent<Transform>();
+        if (tr) {
+            tr->position = newPos;
+            emit selectedObject->propertiesChanged();
+        }
         return;
     }
     if (rightMouseHeld) {
@@ -351,13 +354,11 @@ D3DXVECTOR3 Viewport::ProjectPointOnLine(const D3DXVECTOR3& rayO, const D3DXVECT
 void Viewport::render() {
     if (!device || !scene) return;
 
-    // Обновляем Skybox при необходимости
     if (scene->isSkyboxDirty()) {
         scene->updateSkybox(device);
         scene->clearSkyboxDirty();
     }
 
-    // Обновляем настройки освещения
     if (scene->isLightingDirty()) {
         device->SetRenderState(D3DRS_LIGHTING, scene->getLightingEnabled() ? TRUE : FALSE);
 
@@ -430,19 +431,16 @@ void Viewport::render() {
             D3DXMatrixIdentity(&identity);
             device->SetTransform(D3DTS_WORLD, &identity);
 
-            // 2) параметры проекции и view
             D3DVIEWPORT9 vp;
             device->GetViewport(&vp);
             D3DXMATRIX matView, matProj;
             device->GetTransform(D3DTS_VIEW, &matView);
             device->GetTransform(D3DTS_PROJECTION, &matProj);
 
-            // 3) собираем шесть 3D‑точек (начало и конец трёх осей длины 1.0)
-            D3DXVECTOR3 origin(
-                selectedObject->getPositionX(),
-                selectedObject->getPositionY(),
-                selectedObject->getPositionZ()
-            );
+            auto* tr = selectedObject->getComponent<Transform>();
+            if (!tr) return;
+            D3DXVECTOR3 origin = tr->position;
+
             D3DXVECTOR3 points3D[6] = {
                 origin, origin + D3DXVECTOR3(1,0,0),  // X
                 origin, origin + D3DXVECTOR3(0,1,0),  // Y
@@ -453,7 +451,7 @@ void Viewport::render() {
             for (int i = 0; i < 6; ++i) {
                 D3DXVECTOR3 proj;
                 D3DXVec3Project(
-                    &proj, // <- Исправлено: передается реальная переменная
+                    &proj,
                     &points3D[i],
                     &vp,
                     &matProj,

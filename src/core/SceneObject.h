@@ -1,54 +1,85 @@
 #pragma once
-#include <d3d9.h>
-#include <d3dx9.h>
-#include <string>
 #include <QObject>
+#include <vector>
+#include <memory>
+#include <typeindex>
+#include <unordered_map>
+#include <algorithm>
+#include <cassert>
+#include <d3d9.h>
+#include "Component.h"
+#include "Transform.h"
 
 class SceneObject : public QObject {
     Q_OBJECT
 public:
-    explicit SceneObject(QObject* parent = nullptr) : QObject(parent) {}
-    virtual ~SceneObject() = default;
+    explicit SceneObject(const std::string& name = "Entity", QObject* parent = nullptr)
+        : QObject(parent), name(name)
+    {
+        addComponent<Transform>(this);
+    }
 
-    virtual void render(LPDIRECT3DDEVICE9 device) = 0;
-    virtual std::string getName() const = 0;
-    virtual unsigned int getId() const = 0;
+    const std::string& getName() const { return name; }
 
-    // Position
-    virtual float getPositionX() const { return position.x; }
-    virtual float getPositionY() const { return position.y; }
-    virtual float getPositionZ() const { return position.z; }
+    const std::vector<Component*>& getAllComponents() const { return orderedComponents; }
 
-    virtual void setPositionX(float p) { position.x = p; emit propertiesChanged(); }
-    virtual void setPositionY(float p) { position.y = p; emit propertiesChanged(); }
-    virtual void setPositionZ(float p) { position.z = p; emit propertiesChanged(); }
+    template<typename T, typename... Args>
+    T* addComponent(Args&&... args) {
+        auto idx = std::type_index(typeid(T));
+        assert(components.find(idx) == components.end());
+        auto comp = std::make_unique<T>(std::forward<Args>(args)...);
+        comp->setOwner(this);
+        T* ptr = comp.get();
+        components[idx] = std::move(comp);
+        orderedComponents.push_back(ptr);
+        ptr->onAttach();
+        return ptr;
+    }
 
-    // Rotation
-    virtual float getRotationX() const { return rotation.x; }
-    virtual float getRotationY() const { return rotation.y; }
-    virtual float getRotationZ() const { return rotation.z; }
+    template<typename T>
+    T* getComponent() {
+        auto it = components.find(std::type_index(typeid(T)));
+        return it != components.end() ? static_cast<T*>(it->second.get()) : nullptr;
+    }
 
-    virtual void setRotationX(float r) { rotation.x = r; emit propertiesChanged(); }
-    virtual void setRotationY(float r) { rotation.y = r; emit propertiesChanged(); }
-    virtual void setRotationZ(float r) { rotation.z = r; emit propertiesChanged(); }
+    template<typename T>
+    void removeComponent() {
+        auto idx = std::type_index(typeid(T));
+        auto it = components.find(idx);
+        if (it != components.end()) {
+            it->second->onDetach();
+            components.erase(it);
+            orderedComponents.erase(
+                std::remove_if(orderedComponents.begin(), orderedComponents.end(),
+                    [](Component* c) { return dynamic_cast<T*>(c) != nullptr; }),
+                orderedComponents.end());
+        }
+    }
 
-    // Scale
-    virtual float getScaleX() const { return scale.x; }
-    virtual float getScaleY() const { return scale.y; }
-    virtual float getScaleZ() const { return scale.z; }
+    void update(float dt) {
+        for (auto* c : orderedComponents) c->update(dt);
+    }
+    void render(LPDIRECT3DDEVICE9 device) {
+        for (auto* c : orderedComponents) c->render(device);
+    }
 
-    virtual void setScaleX(float s) { scale.x = s; emit propertiesChanged(); }
-    virtual void setScaleY(float s) { scale.y = s; emit propertiesChanged(); }
-    virtual void setScaleZ(float s) { scale.z = s; emit propertiesChanged(); }
+    void invalidateDeviceObjects() {
+        for (auto* c : orderedComponents)
+            c->invalidateDeviceObjects();
+    }
 
-    virtual void invalidateDeviceObjects() {}
-    virtual bool restoreDeviceObjects(LPDIRECT3DDEVICE9 device) { return true; }
-
-protected:
-    D3DXVECTOR3 position{ 0,0,0 };
-    D3DXVECTOR3 rotation{ 0,0,0 };
-    D3DXVECTOR3 scale { 1,1,1 };
+    bool restoreDeviceObjects(LPDIRECT3DDEVICE9 device) {
+        bool ok = true;
+        for (auto* c : orderedComponents)
+            ok &= c->restoreDeviceObjects(device);
+        return ok;
+    }
 
 signals:
     void propertiesChanged();
+
+private:
+    std::string name;
+    std::unordered_map<std::type_index, std::unique_ptr<Component>> components;
+    std::vector<Component*> orderedComponents;
 };
