@@ -282,11 +282,10 @@ void Viewport::updateCamera(float deltaTime) {
     float speed = 5.0f * deltaTime;
     if (pressedKeys.contains(Qt::Key_W)) {
         cameraPos += cameraDir * speed;
-        qDebug() << "W pressed, cameraPos:" << cameraPos.x << cameraPos.y << cameraPos.z;
     }
     if (pressedKeys.contains(Qt::Key_S)) cameraPos -= cameraDir * speed;
-    if (pressedKeys.contains(Qt::Key_A)) cameraPos -= right * speed;
-    if (pressedKeys.contains(Qt::Key_D)) cameraPos += right * speed;
+    if (pressedKeys.contains(Qt::Key_A)) cameraPos += right * speed;
+    if (pressedKeys.contains(Qt::Key_D)) cameraPos -= right * speed;
 
     D3DXMATRIX view;
     D3DXVECTOR3 look = cameraPos + cameraDir;
@@ -295,7 +294,6 @@ void Viewport::updateCamera(float deltaTime) {
 }
 
 void Viewport::applyCommonRenderStates() {
-    // отключаем Qt‑рисовальщик, настраиваем Z‑тест и отбрасываем обратные полигоны
     device->SetRenderState(D3DRS_ZENABLE, TRUE);
     device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
     device->SetRenderState(D3DRS_LIGHTING, scene->getLightingEnabled() ? TRUE : FALSE);

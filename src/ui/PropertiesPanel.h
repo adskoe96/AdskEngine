@@ -43,6 +43,8 @@ private:
     QVBoxLayout* mainLayout;
     QFormLayout* formLayout;
     QPointer<SceneObject> currentObject = nullptr;
+    
+    QLabel* noObjectLabel;
 
     QDoubleSpinBox* posXSpin;
     QDoubleSpinBox* posYSpin;

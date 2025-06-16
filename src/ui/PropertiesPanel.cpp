@@ -16,6 +16,10 @@ PropertiesPanel::PropertiesPanel(Scene* scene, QWidget* parent)
     formLayout = new QFormLayout();
     mainLayout->addLayout(formLayout);
 
+    noObjectLabel = new QLabel("No object selected");
+    noObjectLabel->setStyleSheet("color: gray;");
+    formLayout->addRow(noObjectLabel);
+
     // Create controls
     posXSpin = new QDoubleSpinBox(); posXSpin->setRange(-100000, 100000); posXSpin->setSingleStep(1);
     posYSpin = new QDoubleSpinBox(); posYSpin->setRange(-100000, 100000); posYSpin->setSingleStep(1);
@@ -87,15 +91,12 @@ void PropertiesPanel::clearPanel() {
     while ((item = formLayout->takeAt(0)) != nullptr) {
         if (auto* widget = item->widget()) {
             formLayout->removeWidget(widget);
-            widget->hide();  // если переиспользуешь, иначе:
-            // widget->deleteLater(); // если они временные
+            widget->hide();
         }
         delete item;
     }
 
-    auto* label = new QLabel("No object selected");
-    label->setStyleSheet("color: gray;");
-    formLayout->addRow(label);
+    noObjectLabel->show();
 
     deleteButton->setEnabled(false);
 }
@@ -112,6 +113,7 @@ void PropertiesPanel::onObjectSelected(QPointer<SceneObject> object) {
     clearPanel();
     if (!currentObject) return;
 
+    noObjectLabel->hide();
     deleteButton->setEnabled(true);
     connect(currentObject, &SceneObject::propertiesChanged, this, &PropertiesPanel::updateUI, Qt::UniqueConnection);
 
