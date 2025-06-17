@@ -1,10 +1,11 @@
 #pragma once
+#include "Scene.h"
+#include "SceneObject.h"
+
 #include <QWidget>
 #include <QFormLayout>
 #include <QPushButton>
 #include <QPointer>
-#include "Scene.h"
-#include "SceneObject.h"
 
 class PropertiesPanel : public QWidget {
     Q_OBJECT

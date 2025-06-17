@@ -2,37 +2,60 @@
 #include "SceneObject.h"
 #include "Transform.h"
 
+#include <QLabel>
+
 void Light::render(LPDIRECT3DDEVICE9 device)
 {
     D3DLIGHT9 L{};
-        L.Type = (type == LightType::Directional ? D3DLIGHT_DIRECTIONAL :
-            type == LightType::Point ? D3DLIGHT_POINT : D3DLIGHT_SPOT);
-        L.Diffuse = color;
-        L.Diffuse.r *= intensity;
-        L.Diffuse.g *= intensity;
-        L.Diffuse.b *= intensity;
+    L.Type = (type == LightType::Directional ? D3DLIGHT_DIRECTIONAL :
+        type == LightType::Point ? D3DLIGHT_POINT : D3DLIGHT_SPOT);
+    L.Diffuse = color;
+    L.Diffuse.r *= intensity;
+    L.Diffuse.g *= intensity;
+    L.Diffuse.b *= intensity;
 
-        if (type != LightType::Directional) {
-            auto* tr = getOwner()->getComponent<Transform>();
-            if (tr) {
-                L.Position = tr->position;
-                if (type == LightType::Spot) {
-                    D3DXVECTOR3 dir{ 0,0,1 };
-                    D3DXMATRIX rx, ry;
-                    D3DXMatrixRotationX(&rx, tr->rotation.x);
-                    D3DXMatrixRotationY(&ry, tr->rotation.y);
-                    D3DXVec3TransformNormal(&dir, &dir, &(rx * ry));
-                    L.Direction = dir;
-                }
-            }
+    auto* tr = getOwner()->getComponent<Transform>();
+    if (tr) {
+        L.Position = tr->position;
+
+        if (type != LightType::Point) {
+            D3DXVECTOR3 dir(0, 0, 1);
+
+            D3DXMATRIX rotationMatrix;
+            D3DXMatrixRotationYawPitchRoll(&rotationMatrix,
+                D3DXToRadian(tr->rotation.y),
+                D3DXToRadian(tr->rotation.x),
+                D3DXToRadian(tr->rotation.z));
+
+            D3DXVec3TransformNormal(&dir, &dir, &rotationMatrix);
+            D3DXVec3Normalize(&dir, &dir);
+            L.Direction = dir;
         }
+    }
 
-        device->SetLight(index, &L);
-        device->LightEnable(index, TRUE);
+    if (type == LightType::Point || type == LightType::Spot) {
+        L.Range = 100.0f;
+        L.Attenuation0 = 1.0f;
+        L.Attenuation1 = 0.1f;
+        L.Attenuation2 = 0.01f;
+
+        if (type == LightType::Spot) {
+            L.Theta = D3DXToRadian(30.0f);
+            L.Phi = D3DXToRadian(45.0f);
+            L.Falloff = 1.0f;
+        }
+    }
+
+    device->SetLight(index, &L);
+    device->LightEnable(index, TRUE);
 }
 
 void Light::createInspector(QWidget* parent, QFormLayout* layout)
 {
+    // Label of component
+    auto* componentLabel = new QLabel("Light", parent);
+    layout->addRow(componentLabel);
+
     // Type
     auto* combo = new QComboBox(parent);
     combo->addItems({ "Directional","Point","Spot" });

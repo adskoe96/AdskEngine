@@ -3,6 +3,7 @@
 #include <QMouseEvent>
 #include <algorithm>
 #include <QDebug>
+#include <QElapsedTimer>
 #include <ConsolePanel.h>
 
 Viewport::Viewport(QWidget* parent)
@@ -13,7 +14,6 @@ Viewport::Viewport(QWidget* parent)
     setAttribute(Qt::WA_NoSystemBackground);
     setAutoFillBackground(false);
 
-    setFocusPolicy(Qt::StrongFocus);
     setFocus();
 
     renderTimer = new QTimer(this);
@@ -23,6 +23,10 @@ Viewport::Viewport(QWidget* parent)
     cameraPos = { 0,0,-5 };
     cameraDir = { 0,0,1 };
     cameraUp = { 0,1,0 };
+
+    setMouseTracking(true);
+    setFocusPolicy(Qt::StrongFocus);
+    elapsedTimer.start();
 }
 
 Viewport::~Viewport() {
@@ -135,11 +139,35 @@ void Viewport::showEvent(QShowEvent* event) {
     if (initD3D()) renderTimer->start(16);
 }
 
+void Viewport::enterEvent(QEvent* event)
+{
+    setFocus();
+}
+
+void Viewport::leaveEvent(QEvent* event)
+{
+    clearFocus();
+}
+
+void Viewport::focusOutEvent(QFocusEvent* event)
+{
+    pressedKeys.clear();
+    if (rightMouseHeld) {
+        rightMouseHeld = false;
+        cursorLocked = false;
+        releaseMouse();
+        releaseKeyboard();
+        setCursor(Qt::ArrowCursor);
+    }
+    QWidget::focusOutEvent(event);
+}
+
 void Viewport::paintEvent(QPaintEvent*) {
     // No Qt painting
 }
 
 void Viewport::resizeEvent(QResizeEvent* event) {
+    mouseCenterPos = QPoint(width() / 2, height() / 2);
     QWidget::resizeEvent(event);
     if (!device) return;
 
@@ -230,9 +258,18 @@ void Viewport::mousePressEvent(QMouseEvent* ev) {
             }
         }
     }
+
     if (ev->button() == Qt::RightButton) {
-        rightMouseHeld = true; lastMousePos = ev->pos(); setCursor(Qt::BlankCursor);
-        grabMouse(); setFocus();
+        rightMouseHeld = true;
+        lastMouseMovePos = ev->pos();
+
+        cursorLocked = true;
+        mouseCenterPos = QPoint(width() / 2, height() / 2);
+        QCursor::setPos(mapToGlobal(mouseCenterPos));
+        setCursor(Qt::BlankCursor);
+        grabMouse();
+        grabKeyboard();
+        setFocus();
     }
 }
 
@@ -243,9 +280,15 @@ void Viewport::mouseReleaseEvent(QMouseEvent* ev) {
         return;
     }
     if (ev->button() == Qt::RightButton) {
-        rightMouseHeld = false; releaseMouse(); setCursor(Qt::ArrowCursor);
+        rightMouseHeld = false;
+        cursorLocked = false;
+        releaseMouse();
+        releaseKeyboard();
+        setCursor(Qt::ArrowCursor);
         return;
     }
+
+    releaseMouse();
 }
 
 void Viewport::mouseMoveEvent(QMouseEvent* ev) {
@@ -262,37 +305,73 @@ void Viewport::mouseMoveEvent(QMouseEvent* ev) {
         }
         return;
     }
-    if (rightMouseHeld) {
-        // existing camera rotation code
-        QPoint delta = ev->pos() - lastMousePos;
-        lastMousePos = ev->pos(); float s = 0.002f;
-        yaw += delta.x() * s; pitch -= delta.y() * s;
+    if (rightMouseHeld && cursorLocked) {
+        const float sensitivity = 0.008f;
+        QPoint delta = ev->pos() - lastMouseMovePos;
+        lastMouseMovePos = ev->pos();
+
+        yaw += delta.x() * sensitivity;
+        pitch -= delta.y() * sensitivity;
         pitch = std::clamp(pitch, -1.5f, 1.5f);
-        D3DXVECTOR3 front{ cosf(pitch) * sinf(yaw), sinf(pitch), cosf(pitch) * cosf(yaw) };
+
+        D3DXVECTOR3 front{
+            cosf(pitch) * sinf(yaw),
+            sinf(pitch),
+            cosf(pitch) * cosf(yaw)
+        };
         D3DXVec3Normalize(&cameraDir, &front);
+
+        const int deadZone = 50;
+        QPoint currentPos = ev->pos();
+        QPoint centerDelta = currentPos - mouseCenterPos;
+
+        if (centerDelta.manhattanLength() > deadZone) {
+            QCursor::setPos(mapToGlobal(mouseCenterPos));
+            lastMouseMovePos = mouseCenterPos;
+        }
+
         return;
     }
+
     if (dragging == DragAxis::None && !rightMouseHeld) {
         setFocus();
     }
+
     QWidget::mouseMoveEvent(ev);
 }
 
 void Viewport::updateCamera(float deltaTime) {
+    static float velocityScale = 1.0f;
+    if (!hasFocus() || !rightMouseHeld) {
+        velocityScale = (std::max)(0.0f, velocityScale - deltaTime * 5.0f);
+        if (velocityScale <= 0.01f) return;
+    }
+    else {
+        velocityScale = (std::min)(1.0f, velocityScale + deltaTime * 10.0f);
+    }
+
     D3DXVECTOR3 right;
     D3DXVec3Cross(&right, &cameraDir, &cameraUp);
     D3DXVec3Normalize(&right, &right);
-    float speed = 5.0f * deltaTime;
-    if (pressedKeys.contains(Qt::Key_W)) {
-        cameraPos += cameraDir * speed;
-    }
-    if (pressedKeys.contains(Qt::Key_S)) cameraPos -= cameraDir * speed;
+
+    D3DXVECTOR3 forward = cameraDir;
+    D3DXVECTOR3 up = cameraUp;
+
+    if (deltaTime > 0.1f) deltaTime = 0.016f;
+
+    float speed = 5.0f * deltaTime * velocityScale;
+
+    if (pressedKeys.contains(Qt::Key_W)) cameraPos += forward * speed;
+    if (pressedKeys.contains(Qt::Key_S)) cameraPos -= forward * speed;
     if (pressedKeys.contains(Qt::Key_A)) cameraPos += right * speed;
     if (pressedKeys.contains(Qt::Key_D)) cameraPos -= right * speed;
+    if (pressedKeys.contains(Qt::Key_Q)) cameraPos -= up * speed;
+    if (pressedKeys.contains(Qt::Key_E)) cameraPos += up * speed;
+    if (pressedKeys.contains(Qt::Key_Space)) cameraPos += D3DXVECTOR3(0, 1, 0) * speed;
 
     D3DXMATRIX view;
-    D3DXVECTOR3 look = cameraPos + cameraDir;
-    D3DXMatrixLookAtLH(&view, &cameraPos, &look, &cameraUp);
+    D3DXVECTOR3 lookAt = cameraPos + cameraDir;
+    D3DXMatrixLookAtLH(&view, &cameraPos, &lookAt, &cameraUp);
     device->SetTransform(D3DTS_VIEW, &view);
 }
 
@@ -381,10 +460,12 @@ void Viewport::render() {
         }
     }
 
-    static QTime time = QTime::currentTime();
-    int msecs = time.elapsed();
-    time.restart();
-    float deltaTime = msecs / 1000.0f;
+    static qint64 lastTime = 0;
+    qint64 currentTime = elapsedTimer.elapsed();
+    float deltaTime = lastTime > 0 ? (currentTime - lastTime) / 1000.0f : 0.016f;
+    lastTime = currentTime;
+
+    if (deltaTime > 0.1f) deltaTime = 0.016f;
 
     updateCamera(deltaTime);
 

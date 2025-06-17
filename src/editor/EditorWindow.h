@@ -1,6 +1,6 @@
 #pragma once
-#include <QMainWindow>
 #include "Scene.h"
+#include <QMainWindow>
 
 class Scene;
 

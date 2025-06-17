@@ -1,4 +1,5 @@
 #include "ProjectPanel.h"
+
 #include <QVBoxLayout>
 #include <QLabel>
 #include <QTreeView>

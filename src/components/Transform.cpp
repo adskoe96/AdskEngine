@@ -1,18 +1,22 @@
 #include "Transform.h"
 #include "SceneObject.h"
 
+#include <QLabel>
+
 D3DXMATRIX Transform::getWorldMatrix() const {
-    D3DXMATRIX S, RX, RY, RZ, T;
+    D3DXMATRIX S, R, T;
     D3DXMatrixScaling(&S, scale.x, scale.y, scale.z);
-    D3DXMatrixRotationX(&RX, rotation.x);
-    D3DXMatrixRotationY(&RY, rotation.y);
-    D3DXMatrixRotationZ(&RZ, rotation.z);
+    D3DXMatrixRotationYawPitchRoll(&R, rotation.y, rotation.x, rotation.z);
     D3DXMatrixTranslation(&T, position.x, position.y, position.z);
-    return S * RZ * RY * RX * T;
+    return S * R * T;
 }
 
 void Transform::createInspector(QWidget* parent, QFormLayout* layout)
 {
+    // Label of component
+    auto* transformLabel = new QLabel("Transform", parent);
+    layout->addRow(transformLabel);
+
     // Position
     auto* posX = new QDoubleSpinBox(parent);
     posX->setRange(-100000, 100000); posX->setValue(position.x);

@@ -1,5 +1,6 @@
 #include "Skybox.h"
-#include <qlogging.h>
+
+#include <QDebug>
 #include <ConsolePanel.h>
 
 struct SkyboxVertex {

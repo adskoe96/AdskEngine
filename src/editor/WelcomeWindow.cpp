@@ -1,4 +1,6 @@
 #include "WelcomeWindow.h"
+#include "EditorWindow.h"
+
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QJsonObject>
@@ -9,7 +11,6 @@
 #include <QLabel>
 #include <QApplication>
 #include <QStyle>
-#include "EditorWindow.h"
 
 WelcomeWindow::WelcomeWindow(QWidget* parent)
     : QMainWindow(parent)

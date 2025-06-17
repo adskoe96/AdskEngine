@@ -17,6 +17,7 @@ public:
     virtual void render(LPDIRECT3DDEVICE9 device) {}
     virtual void createInspector(QWidget* parent, QFormLayout* layout) {}
 
+    virtual void invalidate() {}
     virtual void invalidateDeviceObjects() {}
     virtual bool restoreDeviceObjects(LPDIRECT3DDEVICE9 device) { return true; }
 

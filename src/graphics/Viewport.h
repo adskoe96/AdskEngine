@@ -4,6 +4,8 @@
 #include <QTimer>
 #include <QPoint>
 #include <QSet>
+#include <QElapsedTimer>
+
 #include <d3d9.h>
 #include <d3dx9.h>
 #include "Skybox.h"
@@ -27,9 +29,17 @@ public slots:
 
 protected:
     QPaintEngine* paintEngine() const override { return nullptr; }
+
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void showEvent(QShowEvent* event) override;
+
+    // Focus
+    void enterEvent(QEvent* event) override;
+    void leaveEvent(QEvent* event) override;
+    void focusOutEvent(QFocusEvent* event) override;
+
+    // Input
     void keyPressEvent(QKeyEvent* event) override;
     void keyReleaseEvent(QKeyEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
@@ -64,8 +74,11 @@ private:
 
     // Input
     bool rightMouseHeld = false;
-    QPoint lastMousePos;
+    QPoint lastMouseMovePos;
     QSet<int> pressedKeys;
+    QElapsedTimer elapsedTimer;
+    QPoint mouseCenterPos;
+    bool cursorLocked = false;
 
     // Gizmo settings
     DragAxis dragging = DragAxis::None;

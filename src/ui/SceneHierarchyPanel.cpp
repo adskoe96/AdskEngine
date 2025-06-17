@@ -1,6 +1,7 @@
 ﻿#include "SceneHierarchyPanel.h"
 #include "Scene.h"
 #include "SceneObject.h"
+
 #include <QVBoxLayout>
 #include <QLabel>
 
