@@ -1,10 +1,12 @@
 ﻿#include "Viewport.h"
+#include "ConsolePanel.h"
+
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <algorithm>
-#include <QDebug>
 #include <QElapsedTimer>
-#include <ConsolePanel.h>
+#include <QtMath>
+#include <cmath>
 
 Viewport::Viewport(QWidget* parent)
     : QWidget(parent)
@@ -62,7 +64,7 @@ bool Viewport::initD3D() {
         &d3dpp,
         &device
     ))) {
-        qDebug() << "Failed to create D3D device";
+        ConsolePanel::sError("Failed to create D3D device");
         return false;
     }
 
@@ -169,6 +171,9 @@ void Viewport::paintEvent(QPaintEvent*) {
 void Viewport::resizeEvent(QResizeEvent* event) {
     mouseCenterPos = QPoint(width() / 2, height() / 2);
     QWidget::resizeEvent(event);
+    if (device) {
+        applyCommonRenderStates();
+    }
     if (!device) return;
 
     bool wasCameraInitialized = cameraInitialized;
@@ -305,6 +310,7 @@ void Viewport::mouseMoveEvent(QMouseEvent* ev) {
         }
         return;
     }
+
     if (rightMouseHeld && cursorLocked) {
         const float sensitivity = 0.008f;
         QPoint delta = ev->pos() - lastMouseMovePos;
@@ -314,23 +320,26 @@ void Viewport::mouseMoveEvent(QMouseEvent* ev) {
         pitch -= delta.y() * sensitivity;
         pitch = std::clamp(pitch, -1.5f, 1.5f);
 
-        D3DXVECTOR3 front{
-            cosf(pitch) * sinf(yaw),
-            sinf(pitch),
-            cosf(pitch) * cosf(yaw)
-        };
+        D3DXVECTOR3 front;
+        front.x = cosf(pitch) * sinf(yaw);
+        front.y = sinf(pitch);
+        front.z = cosf(pitch) * cosf(yaw);
         D3DXVec3Normalize(&cameraDir, &front);
 
-        const int deadZone = 50;
-        QPoint currentPos = ev->pos();
-        QPoint centerDelta = currentPos - mouseCenterPos;
+        D3DXVECTOR3 right;
+        D3DXVec3Cross(&right, &cameraDir, &D3DXVECTOR3(0, 1, 0));
+        D3DXVec3Normalize(&right, &right);
 
-        if (centerDelta.manhattanLength() > deadZone) {
+        D3DXVec3Cross(&cameraUp, &right, &cameraDir);
+        D3DXVec3Normalize(&cameraUp, &cameraUp);
+
+        QPoint centerDelta = ev->pos() - mouseCenterPos;
+        const int deadZone = 2;
+
+        if (abs(centerDelta.x()) > deadZone || abs(centerDelta.y()) > deadZone) {
             QCursor::setPos(mapToGlobal(mouseCenterPos));
             lastMouseMovePos = mouseCenterPos;
         }
-
-        return;
     }
 
     if (dragging == DragAxis::None && !rightMouseHeld) {
@@ -359,15 +368,16 @@ void Viewport::updateCamera(float deltaTime) {
 
     if (deltaTime > 0.1f) deltaTime = 0.016f;
 
-    float speed = 5.0f * deltaTime * velocityScale;
+    const float cameraSpeed = 5.0f;
+    const float rotationSpeed = 0.008f;
 
-    if (pressedKeys.contains(Qt::Key_W)) cameraPos += forward * speed;
-    if (pressedKeys.contains(Qt::Key_S)) cameraPos -= forward * speed;
-    if (pressedKeys.contains(Qt::Key_A)) cameraPos += right * speed;
-    if (pressedKeys.contains(Qt::Key_D)) cameraPos -= right * speed;
-    if (pressedKeys.contains(Qt::Key_Q)) cameraPos -= up * speed;
-    if (pressedKeys.contains(Qt::Key_E)) cameraPos += up * speed;
-    if (pressedKeys.contains(Qt::Key_Space)) cameraPos += D3DXVECTOR3(0, 1, 0) * speed;
+    if (pressedKeys.contains(Qt::Key_W)) cameraPos += forward * cameraSpeed * deltaTime;
+    if (pressedKeys.contains(Qt::Key_S)) cameraPos -= forward * cameraSpeed * deltaTime;
+    if (pressedKeys.contains(Qt::Key_A)) cameraPos += right * cameraSpeed * deltaTime;
+    if (pressedKeys.contains(Qt::Key_D)) cameraPos -= right * cameraSpeed * deltaTime;
+    if (pressedKeys.contains(Qt::Key_Q)) cameraPos -= up * cameraSpeed * deltaTime;
+    if (pressedKeys.contains(Qt::Key_E)) cameraPos += up * cameraSpeed * deltaTime;
+    if (pressedKeys.contains(Qt::Key_Space)) cameraPos += up * cameraSpeed * deltaTime;
 
     D3DXMATRIX view;
     D3DXVECTOR3 lookAt = cameraPos + cameraDir;
@@ -410,6 +420,79 @@ void Viewport::BuildPickingRay(const QPoint& mousePos, D3DXVECTOR3& outOrigin, D
 
     outOrigin = pN;
     D3DXVec3Normalize(&outDir, &(pF - pN));
+}
+
+void Viewport::drawGizmoArrow(const D3DXVECTOR3& start, const D3DXVECTOR3& direction, D3DCOLOR color, float length)
+{
+    if (!gizmoLine) return;
+
+    D3DXMATRIX view, proj, world;
+    D3DVIEWPORT9 vp;
+    device->GetTransform(D3DTS_VIEW, &view);
+    device->GetTransform(D3DTS_PROJECTION, &proj);
+    D3DXMatrixIdentity(&world);
+    device->GetViewport(&vp);
+
+    D3DXVECTOR3 end = start + direction * length;
+    
+    D3DXVECTOR3 screenStart, screenEnd;
+    D3DXVec3Project(&screenStart, &start, &vp, &proj, &view, &world);
+    D3DXVec3Project(&screenEnd, &end, &vp, &proj, &view, &world);
+
+    D3DXVECTOR2 linePoints[] = {
+        D3DXVECTOR2(screenStart.x, screenStart.y),
+        D3DXVECTOR2(screenEnd.x, screenEnd.y)
+    };
+    gizmoLine->Draw(linePoints, 2, color);
+
+    const float coneLength = length * 0.2f;
+    const float coneRadius = coneLength * 0.4f;
+
+    D3DXVECTOR3 coneBase = end - direction * coneLength;
+    D3DXVECTOR3 perp1, perp2;
+    D3DXVec3Cross(&perp1, &direction, &cameraUp);
+    D3DXVec3Normalize(&perp1, &perp1);
+    D3DXVec3Cross(&perp2, &direction, &perp1);
+    D3DXVec3Normalize(&perp2, &perp2);
+
+    D3DXVECTOR3 conePoints3D[5] = {
+        end,
+        coneBase + perp1 * coneRadius,
+        coneBase + perp2 * coneRadius,
+        coneBase - perp1 * coneRadius,
+        coneBase - perp2 * coneRadius
+    };
+
+    D3DXVECTOR2 conePoints2D[5];
+    for (int i = 0; i < 5; i++) {
+        D3DXVECTOR3 screenPoint;
+        D3DXVec3Project(&screenPoint, &conePoints3D[i], &vp, &proj, &view, &world);
+        conePoints2D[i] = D3DXVECTOR2(screenPoint.x, screenPoint.y);
+    }
+
+    gizmoLine->Draw(conePoints2D, 5, color);
+}
+
+void Viewport::drawGizmo()
+{
+    if (!selectedObject || !gizmoLine) return;
+
+    auto* tr = selectedObject->getComponent<Transform>();
+    if (!tr) return;
+
+    D3DXVECTOR3 origin = tr->position;
+
+    float distance = D3DXVec3Length(&(cameraPos - origin));
+    float baseSize = 0.5f;
+    float scale = distance * baseSize / 10.0f;
+    scale = std::clamp(scale, 0.1f, 2.0f);
+
+    gizmoLine->SetWidth(2.0f);
+    gizmoLine->SetPattern(0xFFFF);
+
+    drawGizmoArrow(origin, D3DXVECTOR3(1, 0, 0), D3DCOLOR_XRGB(255, 0, 0), scale);
+    drawGizmoArrow(origin, D3DXVECTOR3(0, 1, 0), D3DCOLOR_XRGB(0, 255, 0), scale);
+    drawGizmoArrow(origin, D3DXVECTOR3(0, 0, 1), D3DCOLOR_XRGB(0, 0, 255), scale);
 }
 
 float Viewport::DistanceRayToLine(const D3DXVECTOR3& rayO, const D3DXVECTOR3& rayD, const D3DXVECTOR3& lineP, const D3DXVECTOR3& lineDir)
@@ -512,42 +595,12 @@ void Viewport::render() {
             D3DXMatrixIdentity(&identity);
             device->SetTransform(D3DTS_WORLD, &identity);
 
-            D3DVIEWPORT9 vp;
-            device->GetViewport(&vp);
-            D3DXMATRIX matView, matProj;
-            device->GetTransform(D3DTS_VIEW, &matView);
-            device->GetTransform(D3DTS_PROJECTION, &matProj);
+            device->SetRenderState(D3DRS_ZENABLE, TRUE);
+            device->SetRenderState(D3DRS_ZFUNC, D3DCMP_LESSEQUAL);
 
-            auto* tr = selectedObject->getComponent<Transform>();
-            if (!tr) return;
-            D3DXVECTOR3 origin = tr->position;
-
-            D3DXVECTOR3 points3D[6] = {
-                origin, origin + D3DXVECTOR3(1,0,0),  // X
-                origin, origin + D3DXVECTOR3(0,1,0),  // Y
-                origin, origin + D3DXVECTOR3(0,0,1)   // Z
-            };
-
-            D3DXVECTOR2 points2D[6];
-            for (int i = 0; i < 6; ++i) {
-                D3DXVECTOR3 proj;
-                D3DXVec3Project(
-                    &proj,
-                    &points3D[i],
-                    &vp,
-                    &matProj,
-                    &matView,
-                    &identity
-                );
-                points2D[i] = D3DXVECTOR2(proj.x, proj.y);
-            }
-            
-            gizmoLine->Begin();
-            gizmoLine->Draw(&points2D[0], 2, D3DCOLOR_XRGB(255, 0, 0));
-            gizmoLine->Draw(&points2D[2], 2, D3DCOLOR_XRGB(0, 255, 0));
-            gizmoLine->Draw(&points2D[4], 2, D3DCOLOR_XRGB(0, 0, 255));
-            gizmoLine->End();
+            drawGizmo();
         }
+
         device->EndScene();
     }
 

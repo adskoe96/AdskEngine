@@ -93,13 +93,11 @@ bool MeshRenderer::restoreDeviceObjects(LPDIRECT3DDEVICE9 device) {
     if (!needsRestore) return true;
     if (vertices.empty() || indices.empty()) return false;
 
-    // Добавляем проверку на валидность устройства
     if (!device) {
         ConsolePanel::sError("Cannot restore mesh buffers: invalid device");
         return false;
     }
 
-    // Освобождаем старые буферы, если они есть
     if (vb) { vb->Release(); vb = nullptr; }
     if (ib) { ib->Release(); ib = nullptr; }
 

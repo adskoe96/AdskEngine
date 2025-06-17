@@ -23,6 +23,8 @@ signals:
 
 private slots:
     void onItemSelectionChanged();
+    void onItemEdited(QTreeWidgetItem* item, int column);
+    void onObjectNameChanged(const std::string& newName);
 
 private:
     Scene* scene;

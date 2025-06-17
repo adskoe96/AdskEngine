@@ -30,44 +30,55 @@ Toolbar::Toolbar(Scene* scene, QWidget* parent)
         auto obj = std::make_unique<SceneObject>("Light");
         auto* light = obj->addComponent<Light>();
         scenePtr->addObject(std::move(obj));
-        });
+    });
     createMenu->addAction(createLightAction);
 
-    QAction* createCubeAction = new QAction("Mesh", this);
-    connect(createCubeAction, &QAction::triggered, [scenePtr]() {
+    QAction* createMeshAction = new QAction("Mesh", this);
+    connect(createMeshAction, &QAction::triggered, [scenePtr]() {
         auto obj = std::make_unique<SceneObject>("Mesh");
         obj->addComponent<MeshRenderer>();
         scenePtr->addObject(std::move(obj));
-        });
-    createMenu->addAction(createCubeAction);
+    });
+    createMenu->addAction(createMeshAction);
+
+    QAction* createEmptyAction = new QAction("Empty", this);
+    connect(createEmptyAction, &QAction::triggered, [scenePtr]() {
+        auto obj = std::make_unique<SceneObject>("Empty");
+        scenePtr->addObject(std::move(obj));
+    });
+    createMenu->addAction(createEmptyAction);
 
     createButton->setMenu(createMenu);
     layout->addWidget(createButton);
-
-    // Play button
-    QPushButton* playButton = new QPushButton("Play");
-    layout->addWidget(playButton);
 
     // Environment settings button
     QPushButton* envSettingsButton = new QPushButton("Environment Settings");
     layout->addWidget(envSettingsButton);
     connect(envSettingsButton, &QPushButton::clicked, [this]() {
         emit environmentSettingsRequested();
-        });
+    });
 
     QPushButton* saveButton = new QPushButton("Save Scene");
     layout->addWidget(saveButton);
     connect(saveButton, &QPushButton::clicked, [this]() {
         QString filePath = QFileDialog::getSaveFileName(nullptr, "Save Scene", "", "Scene Files (*.scene)");
         if (!filePath.isEmpty()) this->scene->saveToFile(filePath);
-        });
+    });
 
     QPushButton* loadButton = new QPushButton("Load Scene");
     layout->addWidget(loadButton);
     connect(loadButton, &QPushButton::clicked, [this]() {
         QString filePath = QFileDialog::getOpenFileName(nullptr, "Load Scene", "", "Scene Files (*.scene)");
         if (!filePath.isEmpty()) this->scene->loadFromFile(filePath);
-        });
+    });
+
+    // Play button
+    QPushButton* playButton = new QPushButton("Play");
+    layout->addWidget(playButton);
+
+    // Build button
+    QPushButton* buildButton = new QPushButton("Build");
+    layout->addWidget(buildButton);
 
     layout->addStretch();
 }

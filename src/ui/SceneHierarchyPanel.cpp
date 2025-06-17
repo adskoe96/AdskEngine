@@ -30,6 +30,7 @@ SceneHierarchyPanel::SceneHierarchyPanel(Scene* scene, QWidget* parent)
     // update on add/remove
     connect(scene, &Scene::objectAdded, this, &SceneHierarchyPanel::updateHierarchy);
     connect(scene, &Scene::objectRemoved, this, &SceneHierarchyPanel::updateHierarchy);
+    connect(treeWidget, &QTreeWidget::itemChanged, this, &SceneHierarchyPanel::onItemEdited);
 }
 
 void SceneHierarchyPanel::updateHierarchy() {
@@ -39,13 +40,28 @@ void SceneHierarchyPanel::updateHierarchy() {
         oldObj = ptr.data();
     }
 
+    for (auto it = itemObjectMap.keyBegin(); it != itemObjectMap.keyEnd(); ++it) {
+        if (auto obj = itemObjectMap.value(*it)) {
+            disconnect(obj, &SceneObject::nameChanged,
+                this, &SceneHierarchyPanel::onObjectNameChanged);
+        }
+    }
+
     treeWidget->clear();
     itemObjectMap.clear();
+
+    treeWidget->blockSignals(true);
     for (const auto& objPtr : scene->getObjects()) {
-        auto* it = new QTreeWidgetItem(treeWidget);
-        it->setText(0, QString::fromStdString(objPtr->getName()));
-        itemObjectMap[it] = QPointer<SceneObject>(objPtr.get());
+        auto* item = new QTreeWidgetItem(treeWidget);
+        item->setText(0, QString::fromStdString(objPtr->getName()));
+        item->setFlags(item->flags() | Qt::ItemIsEditable);
+
+        itemObjectMap[item] = QPointer<SceneObject>(objPtr.get());
+
+        connect(objPtr.get(), &SceneObject::nameChanged,
+            this, &SceneHierarchyPanel::onObjectNameChanged);
     }
+    treeWidget->blockSignals(false);
 
     if (oldObj) {
         for (auto it = itemObjectMap.begin(); it != itemObjectMap.end(); ++it) {
@@ -83,5 +99,32 @@ void SceneHierarchyPanel::onItemSelectionChanged() {
     }
     else {
         emit objectSelected(nullptr);
+    }
+}
+
+void SceneHierarchyPanel::onItemEdited(QTreeWidgetItem* item, int column) {
+    if (column != 0) return;
+
+    if (auto obj = itemObjectMap.value(item)) {
+        QString newName = item->text(0);
+
+        treeWidget->blockSignals(true);
+        obj->setName(newName.toStdString());
+        treeWidget->blockSignals(false);
+    }
+}
+
+void SceneHierarchyPanel::onObjectNameChanged(const std::string& newName)
+{
+    SceneObject* obj = qobject_cast<SceneObject*>(sender());
+    if (!obj) return;
+
+    for (auto it = itemObjectMap.begin(); it != itemObjectMap.end(); ++it) {
+        if (it.value() == obj) {
+            treeWidget->blockSignals(true);
+            it.key()->setText(0, QString::fromStdString(newName));
+            treeWidget->blockSignals(false);
+            break;
+        }
     }
 }

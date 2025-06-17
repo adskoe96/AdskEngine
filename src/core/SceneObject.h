@@ -19,6 +19,12 @@ public:
         addComponent<Transform>(this);
     }
 
+    void setName(std::string value) {
+        if (name != value) {
+            name = value;
+            emit nameChanged(name);
+        }
+    }
     const std::string& getName() const { return name; }
 
     const std::vector<Component*>& getAllComponents() const { return orderedComponents; }
@@ -59,6 +65,7 @@ public:
     void update(float dt) {
         for (auto* c : orderedComponents) c->update(dt);
     }
+
     void render(LPDIRECT3DDEVICE9 device) {
         for (auto* c : orderedComponents) c->render(device);
     }
@@ -77,6 +84,7 @@ public:
 
 signals:
     void propertiesChanged();
+    void nameChanged(const std::string& newName);
 
 private:
     std::string name;

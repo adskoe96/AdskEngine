@@ -8,6 +8,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 find_package(dxsdk-d3dx CONFIG REQUIRED)
 find_package(assimp REQUIRED)
+find_package(Jolt CONFIG REQUIRED)
 find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
 
 set(RESOURCES_DIR "${CMAKE_SOURCE_DIR}/assets")
@@ -37,6 +38,7 @@ target_link_libraries(AdskEngine PRIVATE
     Microsoft::D3DX9
     d3d9.lib
     assimp::assimp
+    Jolt::Jolt
     winmm.lib
     Qt5::Core
     Qt5::Gui
