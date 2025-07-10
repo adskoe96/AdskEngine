@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
+find_package(lz4 CONFIG REQUIRED)
 find_package(dxsdk-d3dx CONFIG REQUIRED)
 find_package(assimp REQUIRED)
 find_package(Jolt CONFIG REQUIRED)
@@ -27,6 +28,7 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/src/graphics
     ${CMAKE_SOURCE_DIR}/src/ui
     ${CMAKE_SOURCE_DIR}/src/editor
+    ${CMAKE_SOURCE_DIR}/third_party/wwp
 )
 
 add_executable(AdskEngine
@@ -43,4 +45,6 @@ target_link_libraries(AdskEngine PRIVATE
     Qt5::Core
     Qt5::Gui
     Qt5::Widgets
+    wwpLib.lib
+    lz4::lz4
 )

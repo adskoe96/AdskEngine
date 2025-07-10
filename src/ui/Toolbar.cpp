@@ -58,6 +58,7 @@ Toolbar::Toolbar(Scene* scene, QWidget* parent)
         emit environmentSettingsRequested();
     });
 
+    // Save Scene button
     QPushButton* saveButton = new QPushButton("Save Scene");
     layout->addWidget(saveButton);
     connect(saveButton, &QPushButton::clicked, [this]() {
@@ -65,6 +66,7 @@ Toolbar::Toolbar(Scene* scene, QWidget* parent)
         if (!filePath.isEmpty()) this->scene->saveToFile(filePath);
     });
 
+    // Load Scene button
     QPushButton* loadButton = new QPushButton("Load Scene");
     layout->addWidget(loadButton);
     connect(loadButton, &QPushButton::clicked, [this]() {
@@ -72,13 +74,13 @@ Toolbar::Toolbar(Scene* scene, QWidget* parent)
         if (!filePath.isEmpty()) this->scene->loadFromFile(filePath);
     });
 
-    // Play button
-    QPushButton* playButton = new QPushButton("Play");
-    layout->addWidget(playButton);
-
     // Build button
     QPushButton* buildButton = new QPushButton("Build");
     layout->addWidget(buildButton);
+
+    // Play button
+    QPushButton* playButton = new QPushButton("Play");
+    layout->addWidget(playButton);
 
     layout->addStretch();
 }

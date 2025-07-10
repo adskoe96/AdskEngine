@@ -1,14 +1,24 @@
 #include "Transform.h"
 #include "SceneObject.h"
-
 #include <QLabel>
 
 D3DXMATRIX Transform::getWorldMatrix() const {
-    D3DXMATRIX S, R, T;
-    D3DXMatrixScaling(&S, scale.x, scale.y, scale.z);
-    D3DXMatrixRotationYawPitchRoll(&R, rotation.y, rotation.x, rotation.z);
-    D3DXMatrixTranslation(&T, position.x, position.y, position.z);
-    return S * R * T;
+    if (isDirty) {
+        D3DXMATRIX S, R, T;
+        const D3DXVECTOR3 rad = {
+            D3DXToRadian(rotation.x),
+            D3DXToRadian(rotation.y),
+            D3DXToRadian(rotation.z)
+        };
+
+        D3DXMatrixScaling(&S, scale.x, scale.y, scale.z);
+        D3DXMatrixRotationYawPitchRoll(&R, rad.y, rad.x, rad.z);
+        D3DXMatrixTranslation(&T, position.x, position.y, position.z);
+
+        cachedWorldMatrix = S * R * T;
+        isDirty = false;
+    }
+    return cachedWorldMatrix;
 }
 
 void Transform::createInspector(QWidget* parent, QFormLayout* layout)
@@ -18,59 +28,58 @@ void Transform::createInspector(QWidget* parent, QFormLayout* layout)
     layout->addRow(transformLabel);
 
     // Position
-    auto* posX = new QDoubleSpinBox(parent);
-    posX->setRange(-100000, 100000); posX->setValue(position.x);
-    connect(posX, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-        [this](double v) { position.x = v; emit getOwner()->propertiesChanged(); });
-    layout->addRow("Position X", posX);
+    auto createInput = [parent, layout](const QString& label, float value, auto setter) {
+        auto* spinner = new QDoubleSpinBox(parent);
+        spinner->setRange(-100000, 100000);
+        spinner->setValue(value);
 
-    auto* posY = new QDoubleSpinBox(parent);
-    posY->setRange(-100000, 100000); posY->setValue(position.y);
-    connect(posY, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-        [this](double v) { position.y = v; emit getOwner()->propertiesChanged(); });
-    layout->addRow("Position Y", posY);
+        // Исправленный connect с явным указанием перегрузки
+        QObject::connect(spinner, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+            [setter](double v) { (setter)(static_cast<float>(v)); });
 
-    auto* posZ = new QDoubleSpinBox(parent);
-    posZ->setRange(-100000, 100000); posZ->setValue(position.z);
-    connect(posZ, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-        [this](double v) { position.z = v; emit getOwner()->propertiesChanged(); });
-    layout->addRow("Position Z", posZ);
+        layout->addRow(label, spinner);
+        return spinner;
+    };
+
+    // Position
+    createInput("Position X", position.x, [this](float v) { setPositionX(v); });
+    createInput("Position Y", position.y, [this](float v) { setPositionY(v); });
+    createInput("Position Z", position.z, [this](float v) { setPositionZ(v); });
 
     // Rotation
-    auto* rotX = new QDoubleSpinBox(parent);
-    rotX->setRange(-360, 360); rotX->setValue(rotation.x);
-    connect(rotX, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-        [this](double v) { rotation.x = v; emit getOwner()->propertiesChanged(); });
-    layout->addRow("Rotation X", rotX);
-
-    auto* rotY = new QDoubleSpinBox(parent);
-    rotY->setRange(-360, 360); rotY->setValue(rotation.y);
-    connect(rotY, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-        [this](double v) { rotation.y = v; emit getOwner()->propertiesChanged(); });
-    layout->addRow("Rotation Y", rotY);
-
-    auto* rotZ = new QDoubleSpinBox(parent);
-    rotZ->setRange(-360, 360); rotZ->setValue(rotation.z);
-    connect(rotZ, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-        [this](double v) { rotation.z = v; emit getOwner()->propertiesChanged(); });
-    layout->addRow("Rotation Z", rotZ);
+    createInput("Rotation X", rotation.x, [this](float v) { setRotationX(v); });
+    createInput("Rotation Y", rotation.y, [this](float v) { setRotationY(v); });
+    createInput("Rotation Z", rotation.z, [this](float v) { setRotationZ(v); });
 
     // Scale
-    auto* scaleX = new QDoubleSpinBox(parent);
-    scaleX->setRange(0, 1000); scaleX->setValue(scale.x);
-    connect(scaleX, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-        [this](double v) { scale.x = float(v); emit getOwner()->propertiesChanged(); });
-    layout->addRow("Scale X", scaleX);
+    createInput("Scale X", scale.x, [this](float v) { setScaleX(v); });
+    createInput("Scale Y", scale.y, [this](float v) { setScaleY(v); });
+    createInput("Scale Z", scale.z, [this](float v) { setScaleZ(v); });
+}
 
-    auto* scaleY = new QDoubleSpinBox(parent);
-    scaleY->setRange(0, 1000); scaleY->setValue(scale.y);
-    connect(scaleY, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-        [this](double v) { scale.y = float(v); emit getOwner()->propertiesChanged(); });
-    layout->addRow("Scale Y", scaleY);
+void Transform::setPosition(const D3DXVECTOR3& pos)
+{
+    if (position.x != pos.x || position.y != pos.y || position.z != pos.z) {
+        position = pos;
+        isDirty = true;
+        if (getOwner()) emit getOwner()->propertiesChanged();
+    }
+}
 
-    auto* scaleZ = new QDoubleSpinBox(parent);
-    scaleZ->setRange(0, 1000); scaleZ->setValue(scale.z);
-    connect(scaleZ, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-        [this](double v) { scale.z = float(v); emit getOwner()->propertiesChanged(); });
-    layout->addRow("Scale Z", scaleZ);
+void Transform::setRotation(const D3DXVECTOR3& rot)
+{
+    if (rotation.x != rot.x || rotation.y != rot.y || rotation.z != rot.z) {
+        rotation = rot;
+        isDirty = true;
+        if (getOwner()) emit getOwner()->propertiesChanged();
+    }
+}
+
+void Transform::setScale(const D3DXVECTOR3& scl)
+{
+    if (scale.x != scl.x || scale.y != scl.y || scale.z != scl.z) {
+        scale = scl;
+        isDirty = true;
+        if (getOwner()) emit getOwner()->propertiesChanged();
+    }
 }

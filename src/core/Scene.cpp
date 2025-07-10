@@ -98,15 +98,19 @@ void Scene::saveToFile(const QString& filePath) {
         // Always Transform
         if (auto* tr = obj->getComponent<Transform>()) {
             QJsonObject jsTr;
-            jsTr["posX"] = tr->position.x;
-            jsTr["posY"] = tr->position.y;
-            jsTr["posZ"] = tr->position.z;
-            jsTr["rotX"] = tr->rotation.x;
-            jsTr["rotY"] = tr->rotation.y;
-            jsTr["rotZ"] = tr->rotation.z;
-            jsTr["scaleX"] = tr->scale.x;
-            jsTr["scaleY"] = tr->scale.y;
-            jsTr["scaleZ"] = tr->scale.z;
+            const auto& pos = tr->getPosition();
+            const auto& rot = tr->getRotation();
+            const auto& scl = tr->getScale();
+
+            jsTr["posX"] = pos.x;
+            jsTr["posY"] = pos.y;
+            jsTr["posZ"] = pos.z;
+            jsTr["rotX"] = rot.x;
+            jsTr["rotY"] = rot.y;
+            jsTr["rotZ"] = rot.z;
+            jsTr["scaleX"] = scl.x;
+            jsTr["scaleY"] = scl.y;
+            jsTr["scaleZ"] = scl.z;
             o["Transform"] = jsTr;
         }
 
@@ -167,15 +171,24 @@ void Scene::loadFromFile(const QString& filePath) {
         if (jsObj.contains("Transform")) {
             auto jsTr = jsObj["Transform"].toObject();
             auto* tr = newObj->getComponent<Transform>();
-            tr->position.x = jsTr["posX"].toDouble();
-            tr->position.y = jsTr["posY"].toDouble();
-            tr->position.z = jsTr["posZ"].toDouble();
-            tr->rotation.x = jsTr["rotX"].toDouble();
-            tr->rotation.y = jsTr["rotY"].toDouble();
-            tr->rotation.z = jsTr["rotZ"].toDouble();
-            tr->scale.x = jsTr["scaleX"].toDouble();
-            tr->scale.y = jsTr["scaleY"].toDouble();
-            tr->scale.z = jsTr["scaleZ"].toDouble();
+
+            tr->setPosition({
+                static_cast<float>(jsTr["posX"].toDouble()),
+                static_cast<float>(jsTr["posY"].toDouble()),
+                static_cast<float>(jsTr["posZ"].toDouble())
+                });
+
+            tr->setRotation({
+                static_cast<float>(jsTr["rotX"].toDouble()),
+                static_cast<float>(jsTr["rotY"].toDouble()),
+                static_cast<float>(jsTr["rotZ"].toDouble())
+                });
+
+            tr->setScale({
+                static_cast<float>(jsTr["scaleX"].toDouble()),
+                static_cast<float>(jsTr["scaleY"].toDouble()),
+                static_cast<float>(jsTr["scaleZ"].toDouble())
+                });
         }
 
         // MeshRenderer

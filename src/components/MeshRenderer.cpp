@@ -1,6 +1,7 @@
 #include "MeshRenderer.h"
 #include "Transform.h"
 #include "ConsolePanel.h"
+#include "ResourceManager.h"
 
 #include <d3d9types.h>
 #include <assimp/Importer.hpp>
@@ -11,9 +12,12 @@
 #include <QFileDialog>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMessageBox>
 
 
 void MeshRenderer::render(LPDIRECT3DDEVICE9 device) {
+    if (!mesh || mesh->vertices.empty()) return;
+
     if (needsRestore) {
         if (!restoreDeviceObjects(device)) {
             return;
@@ -21,15 +25,14 @@ void MeshRenderer::render(LPDIRECT3DDEVICE9 device) {
     }
 
     if (!vb || !ib) {
-        ConsolePanel::sError("Invalid mesh buffers");
         return;
     }
 
-    auto* tr = getOwner()->getComponent<Transform>();
-    D3DXMATRIX world = tr ? tr->getWorldMatrix() : D3DXMATRIX();
+    updateWorldMatrix();
+
     D3DXMATRIX old;
     device->GetTransform(D3DTS_WORLD, &old);
-    device->SetTransform(D3DTS_WORLD, &world);
+    device->SetTransform(D3DTS_WORLD, &cachedWorldMatrix);
 
     // Material settings
     D3DMATERIAL9 material;
@@ -50,9 +53,9 @@ void MeshRenderer::render(LPDIRECT3DDEVICE9 device) {
         D3DPT_TRIANGLELIST,
         0,
         0,
-        vertices.size(),
+        mesh->vertices.size(),
         0,
-        indices.size() / 3
+        mesh->indices.size() / 3
     );
 
     // Restoration of condition
@@ -72,7 +75,9 @@ void MeshRenderer::createInspector(QWidget* parent, QFormLayout* layout) {
     layout->addRow("", browse);
 
     connect(browse, &QPushButton::clicked, [this, pathField]() {
-        QString file = QFileDialog::getOpenFileName(nullptr, "Choose Model", "", "Model Files (*.fbx *.obj)");
+        QString file = QFileDialog::getOpenFileName(nullptr, "Choose Model", "",
+            "Model Files (*.fbx *.obj *.dae *.gltf)");
+
         if (!file.isEmpty()) {
             setMeshPath(file);
             pathField->setText(file);
@@ -83,26 +88,31 @@ void MeshRenderer::createInspector(QWidget* parent, QFormLayout* layout) {
     });
 }
 
-void MeshRenderer::invalidate() {
-    if (vb) { vb->Release(); vb = nullptr; }
-    if (ib) { ib->Release(); ib = nullptr; }
+void MeshRenderer::invalidateDeviceObjects()
+{
+    releaseResources();
     needsRestore = true;
 }
 
 bool MeshRenderer::restoreDeviceObjects(LPDIRECT3DDEVICE9 device) {
-    if (!needsRestore) return true;
-    if (vertices.empty() || indices.empty()) return false;
+    if (!needsRestore || !mesh) return true;
+    if (mesh->vertices.empty() || mesh->indices.empty()) return false;
 
     if (!device) {
         ConsolePanel::sError("Cannot restore mesh buffers: invalid device");
         return false;
     }
 
-    if (vb) { vb->Release(); vb = nullptr; }
-    if (ib) { ib->Release(); ib = nullptr; }
+    releaseResources();
 
-    if (FAILED(device->CreateVertexBuffer(vertices.size() * sizeof(Vertex),
-        0, FVF_VERTEX, D3DPOOL_MANAGED, &vb, nullptr))) {
+    if (FAILED(device->CreateVertexBuffer(
+        mesh->vertices.size() * sizeof(Vertex),
+        D3DUSAGE_WRITEONLY,
+        FVF_VERTEX,
+        D3DPOOL_MANAGED,
+        &vb,
+        nullptr
+    ))) {
         ConsolePanel::sError("Failed to create vertex buffer");
         return false;
     }
@@ -112,11 +122,17 @@ bool MeshRenderer::restoreDeviceObjects(LPDIRECT3DDEVICE9 device) {
         ConsolePanel::sError("Failed to lock vertex buffer");
         return false;
     }
-    memcpy(ptr, vertices.data(), vertices.size() * sizeof(Vertex));
+    memcpy(ptr, mesh->vertices.data(), mesh->vertices.size() * sizeof(Vertex));
     vb->Unlock();
 
-    if (FAILED(device->CreateIndexBuffer(indices.size() * sizeof(WORD),
-        0, D3DFMT_INDEX16, D3DPOOL_MANAGED, &ib, nullptr))) {
+    if (FAILED(device->CreateIndexBuffer(
+        mesh->indices.size() * sizeof(WORD),
+        D3DUSAGE_WRITEONLY,
+        D3DFMT_INDEX16,
+        D3DPOOL_MANAGED,
+        &ib,
+        nullptr
+    ))) {
         ConsolePanel::sError("Failed to create index buffer");
         return false;
     }
@@ -127,7 +143,7 @@ bool MeshRenderer::restoreDeviceObjects(LPDIRECT3DDEVICE9 device) {
         ib = nullptr;
         return false;
     }
-    memcpy(ptr, indices.data(), indices.size() * sizeof(WORD));
+    memcpy(ptr, mesh->indices.data(), mesh->indices.size() * sizeof(WORD));
     ib->Unlock();
 
     needsRestore = false;
@@ -136,95 +152,81 @@ bool MeshRenderer::restoreDeviceObjects(LPDIRECT3DDEVICE9 device) {
 
 void MeshRenderer::setMeshPath(const QString& path)
 {
+    if (meshPath == path) return;
+
     meshPath = path;
     if (loadMeshFromFile(path)) {
-        invalidate();
+        invalidateDeviceObjects();
         if (getOwner()) {
             emit getOwner()->propertiesChanged();
         }
     }
 }
 
+bool MeshRenderer::isVisible(const D3DXMATRIX& viewProj) const
+{
+    if (!mesh || mesh->vertices.empty()) return false;
+
+    D3DXVECTOR3 min = mesh->minBounds;
+    D3DXVECTOR3 max = mesh->maxBounds;
+
+    D3DXVECTOR3 corners[8] = {
+        D3DXVECTOR3(min.x, min.y, min.z),
+        D3DXVECTOR3(max.x, min.y, min.z),
+        D3DXVECTOR3(min.x, max.y, min.z),
+        D3DXVECTOR3(max.x, max.y, min.z),
+        D3DXVECTOR3(min.x, min.y, max.z),
+        D3DXVECTOR3(max.x, min.y, max.z),
+        D3DXVECTOR3(min.x, max.y, max.z),
+        D3DXVECTOR3(max.x, max.y, max.z)
+    };
+
+    D3DXMATRIX worldViewProj = cachedWorldMatrix * viewProj;
+
+    for (auto& corner : corners) {
+        D3DXVECTOR3 projected;
+        D3DXVec3TransformCoord(&projected, &corner, &worldViewProj);
+
+        if (projected.x >= -1.0f && projected.x <= 1.0f &&
+            projected.y >= -1.0f && projected.y <= 1.0f &&
+            projected.z >= 0.0f && projected.z <= 1.0f) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 bool MeshRenderer::loadMeshFromFile(const QString& path) {
-    Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile(path.toStdString(),
-        aiProcess_Triangulate |
-        aiProcess_GenNormals |
-        aiProcess_JoinIdenticalVertices |
-        aiProcess_ConvertToLeftHanded);
-
-    if (!scene) {
-        ConsolePanel::sError(QString("Mesh load error: %1").arg(importer.GetErrorString()));
+    try {
+        mesh = ResourceManager::loadMesh(path);
+        return mesh != nullptr;
+    }
+    catch (const std::exception& e) {
+        ConsolePanel::sError(QString("Mesh load error: %1").arg(e.what()));
+        QMessageBox::critical(nullptr, "Load Error",
+            QString("Failed to load mesh:\n%1").arg(e.what()));
         return false;
     }
+}
 
-    if (!scene->HasMeshes()) {
-        ConsolePanel::sError("No meshes found in the file");
-        return false;
+void MeshRenderer::releaseResources()
+{
+    if (vb) { vb->Release(); vb = nullptr; }
+    if (ib) { ib->Release(); ib = nullptr; }
+}
+
+void MeshRenderer::updateWorldMatrix()
+{
+    if (worldMatrixValid) return;
+
+    auto* tr = getOwner()->getComponent<Transform>();
+    if (tr) {
+        cachedWorldMatrix = tr->getWorldMatrix();
+    }
+    else {
+        D3DXMatrixIdentity(&cachedWorldMatrix);
     }
 
-    vertices.clear();
-    indices.clear();
-
-    // Automatic scale
-    float maxExtent = 0.0f;
-    std::vector<aiVector3D> tempVertices;
-
-    for (unsigned m = 0; m < scene->mNumMeshes; ++m) {
-        aiMesh* mesh = scene->mMeshes[m];
-        for (unsigned i = 0; i < mesh->mNumVertices; ++i) {
-            const aiVector3D& v = mesh->mVertices[i];
-
-            // Calculate absolute values of coordinates
-            float absX = (v.x < 0) ? -v.x : v.x;
-            float absY = (v.y < 0) ? -v.y : v.y;
-            float absZ = (v.z < 0) ? -v.z : v.z;
-
-            // Updating the maximum size
-            if (absX > maxExtent) maxExtent = absX;
-            if (absY > maxExtent) maxExtent = absY;
-            if (absZ > maxExtent) maxExtent = absZ;
-        }
-    }
-
-    // Calculate scale
-    if (maxExtent < 0.0001f) maxExtent = 1.0f;
-    const float targetScale = 1.0f / maxExtent;
-    if (auto* tr = getOwner()->getComponent<Transform>()) {
-        tr->scale = { targetScale, targetScale, targetScale };
-    }
-
-    // Filling vertices with scaling and Y inversion
-    for (unsigned m = 0; m < scene->mNumMeshes; ++m) {
-        aiMesh* mesh = scene->mMeshes[m];
-        unsigned indexOffset = vertices.size();
-
-        for (unsigned i = 0; i < mesh->mNumVertices; ++i) {
-            Vertex v{};
-            v.x = mesh->mVertices[i].x * targetScale;
-            v.y = -mesh->mVertices[i].y * targetScale; // Y inversion
-            v.z = mesh->mVertices[i].z * targetScale;
-
-            if (mesh->HasNormals()) {
-                v.nx = mesh->mNormals[i].x;
-                v.ny = -mesh->mNormals[i].y; // Inversion of normal
-                v.nz = mesh->mNormals[i].z;
-            }
-
-            v.color = D3DCOLOR_XRGB(255, 255, 255);
-            vertices.push_back(v);
-        }
-
-        for (unsigned i = 0; i < mesh->mNumFaces; ++i) {
-            const aiFace& face = mesh->mFaces[i];
-            if (face.mNumIndices == 3) {
-                indices.push_back(indexOffset + face.mIndices[0]);
-                indices.push_back(indexOffset + face.mIndices[1]);
-                indices.push_back(indexOffset + face.mIndices[2]);
-            }
-        }
-    }
-
-    invalidate();
-    return true;
+    worldMatrixValid = true;
 }

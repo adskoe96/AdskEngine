@@ -2,6 +2,7 @@
 #include <QFile>
 #include <QStyleFactory>
 #include "editor/WelcomeWindow.h"
+#include "wwp.h"
 
 void setDarkTheme(QApplication& app) {
     app.setStyle(QStyleFactory::create("Fusion"));
@@ -25,6 +26,7 @@ void setDarkTheme(QApplication& app) {
 }
 
 int main(int argc, char* argv[]) {
+    wwp::set_packs_directory("content");
     QApplication app(argc, argv);
 
     setDarkTheme(app);

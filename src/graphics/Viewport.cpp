@@ -11,6 +11,7 @@
 Viewport::Viewport(QWidget* parent)
     : QWidget(parent)
 {
+    lastMouseMovePos = QPoint(width() / 2, height() / 2);
     setAttribute(Qt::WA_PaintOnScreen);
     setAttribute(Qt::WA_NativeWindow);
     setAttribute(Qt::WA_NoSystemBackground);
@@ -237,44 +238,65 @@ void Viewport::keyReleaseEvent(QKeyEvent* ev) { pressedKeys.remove(ev->key()); }
 
 void Viewport::mousePressEvent(QMouseEvent* ev) {
     if (ev->button() == Qt::LeftButton && selectedObject) {
-        D3DXVECTOR3 rayO, rayD;
-        BuildPickingRay(ev->pos(), rayO, rayD);
-
         auto* tr = selectedObject->getComponent<Transform>();
         if (!tr) return;
 
-        D3DXVECTOR3 origin = tr->position;
-        struct AxisLine { D3DXVECTOR3 dir; DragAxis axis; };
-        AxisLine axes[3] = {
+        const auto& position = tr->getPosition();
+
+        struct Axe { D3DXVECTOR3 dir; DragAxis axis; };
+        Axe axes[3] = {
             {{1,0,0}, DragAxis::X},
             {{0,1,0}, DragAxis::Y},
             {{0,0,1}, DragAxis::Z}
         };
-        const float pickThresh = 0.1f;
+        QPoint mouse = ev->pos();
+        float bestDist = GIZMO_PICK_THRESHOLD;
+        DragAxis bestAxis = DragAxis::None;
+        D3DXVECTOR3 bestDir;
+
         for (auto& ax : axes) {
-            float dist = DistanceRayToLine(rayO, rayD, origin, ax.dir);
-            if (dist < pickThresh) {
-                dragging = ax.axis;
-                dragAxisDir = ax.dir;
-                objStartPos = origin;
-                dragStartWorld = ProjectPointOnLine(rayO, rayD, origin, ax.dir);
-                setCursor(Qt::SizeAllCursor);
-                return;
+            D3DXVECTOR3 p0 = position;
+            D3DXVECTOR3 p1 = position + ax.dir * GIZMO_LENGTH;
+            QPoint s0 = projectToScreen(p0, device);
+            QPoint s1 = projectToScreen(p1, device);
+
+            float t;
+            QPointF diff = s1 - s0;
+            float len2 = diff.x() * diff.x() + diff.y() * diff.y();
+            if (len2 < 1e-6f) continue;
+            t = ((mouse.x() - s0.x()) * diff.x() + (mouse.y() - s0.y()) * diff.y()) / len2;
+            t = std::clamp(t, 0.0f, 1.0f);
+            QPointF proj = s0 + diff * t;
+            float dist = std::hypot(mouse.x() - proj.x(), mouse.y() - proj.y());
+            if (dist < bestDist) {
+                bestDist = dist;
+                bestAxis = ax.axis;
+                bestDir = ax.dir;
             }
+        }
+
+        if (bestAxis != DragAxis::None) {
+            dragging = bestAxis;
+            dragAxisDir = bestDir;
+            objStartPos = position;
+            D3DXVECTOR3 rayO, rayD;
+            BuildPickingRay(ev->pos(), rayO, rayD);
+            dragStartWorld = ProjectPointOnLine(rayO, rayD, objStartPos, dragAxisDir);
+            setCursor(Qt::SizeAllCursor);
+            return;
         }
     }
 
     if (ev->button() == Qt::RightButton) {
         rightMouseHeld = true;
-        lastMouseMovePos = ev->pos();
-
         cursorLocked = true;
         mouseCenterPos = QPoint(width() / 2, height() / 2);
-        QCursor::setPos(mapToGlobal(mouseCenterPos));
-        setCursor(Qt::BlankCursor);
-        grabMouse();
-        grabKeyboard();
+        setCursor(Qt::CrossCursor);
         setFocus();
+        syncYawPitchWithCameraDir();
+        lastGlobalMousePos = ev->pos();
+        lastMouseMovePos = ev->pos();
+        ignoreFirstMouseMove = true;
     }
 }
 
@@ -297,92 +319,79 @@ void Viewport::mouseReleaseEvent(QMouseEvent* ev) {
 }
 
 void Viewport::mouseMoveEvent(QMouseEvent* ev) {
-    if (dragging != DragAxis::None && selectedObject) {
-        D3DXVECTOR3 rayO, rayD;
-        BuildPickingRay(ev->pos(), rayO, rayD);
-        D3DXVECTOR3 currentOnAxis = ProjectPointOnLine(rayO, rayD, objStartPos, dragAxisDir);
-        D3DXVECTOR3 delta = currentOnAxis - dragStartWorld;
-        D3DXVECTOR3 newPos = objStartPos + delta;
-        auto* tr = selectedObject->getComponent<Transform>();
-        if (tr) {
-            tr->position = newPos;
-            emit selectedObject->propertiesChanged();
-        }
+    if (!rightMouseHeld)
+    {
+        return QWidget::mouseMoveEvent(ev);
+    }
+        
+
+    QPoint globalCenter = mapToGlobal(mouseCenterPos);
+
+    if (ignoreNextMouseMove) {
+        ignoreNextMouseMove = false;
         return;
     }
 
-    if (rightMouseHeld && cursorLocked) {
-        const float sensitivity = 0.008f;
-        QPoint delta = ev->pos() - lastMouseMovePos;
-        lastMouseMovePos = ev->pos();
+    QPoint delta = ev->globalPos() - globalCenter;
 
-        yaw += delta.x() * sensitivity;
-        pitch -= delta.y() * sensitivity;
-        pitch = std::clamp(pitch, -1.5f, 1.5f);
+    const float sensitivity = 0.002f;
+    yaw += delta.x() * sensitivity;
+    pitch -= delta.y() * sensitivity;
+    pitch = std::clamp(pitch, -D3DX_PI / 2 + 0.01f, D3DX_PI / 2 - 0.01f);
 
-        D3DXVECTOR3 front;
-        front.x = cosf(pitch) * sinf(yaw);
-        front.y = sinf(pitch);
-        front.z = cosf(pitch) * cosf(yaw);
-        D3DXVec3Normalize(&cameraDir, &front);
-
-        D3DXVECTOR3 right;
-        D3DXVec3Cross(&right, &cameraDir, &D3DXVECTOR3(0, 1, 0));
-        D3DXVec3Normalize(&right, &right);
-
-        D3DXVec3Cross(&cameraUp, &right, &cameraDir);
-        D3DXVec3Normalize(&cameraUp, &cameraUp);
-
-        QPoint centerDelta = ev->pos() - mouseCenterPos;
-        const int deadZone = 2;
-
-        if (abs(centerDelta.x()) > deadZone || abs(centerDelta.y()) > deadZone) {
-            QCursor::setPos(mapToGlobal(mouseCenterPos));
-            lastMouseMovePos = mouseCenterPos;
-        }
-    }
-
-    if (dragging == DragAxis::None && !rightMouseHeld) {
-        setFocus();
-    }
-
-    QWidget::mouseMoveEvent(ev);
-}
-
-void Viewport::updateCamera(float deltaTime) {
-    static float velocityScale = 1.0f;
-    if (!hasFocus() || !rightMouseHeld) {
-        velocityScale = (std::max)(0.0f, velocityScale - deltaTime * 5.0f);
-        if (velocityScale <= 0.01f) return;
-    }
-    else {
-        velocityScale = (std::min)(1.0f, velocityScale + deltaTime * 10.0f);
-    }
-
-    D3DXVECTOR3 right;
-    D3DXVec3Cross(&right, &cameraDir, &cameraUp);
-    D3DXVec3Normalize(&right, &right);
-
-    D3DXVECTOR3 forward = cameraDir;
-    D3DXVECTOR3 up = cameraUp;
-
-    if (deltaTime > 0.1f) deltaTime = 0.016f;
-
-    const float cameraSpeed = 5.0f;
-    const float rotationSpeed = 0.008f;
-
-    if (pressedKeys.contains(Qt::Key_W)) cameraPos += forward * cameraSpeed * deltaTime;
-    if (pressedKeys.contains(Qt::Key_S)) cameraPos -= forward * cameraSpeed * deltaTime;
-    if (pressedKeys.contains(Qt::Key_A)) cameraPos += right * cameraSpeed * deltaTime;
-    if (pressedKeys.contains(Qt::Key_D)) cameraPos -= right * cameraSpeed * deltaTime;
-    if (pressedKeys.contains(Qt::Key_Q)) cameraPos -= up * cameraSpeed * deltaTime;
-    if (pressedKeys.contains(Qt::Key_E)) cameraPos += up * cameraSpeed * deltaTime;
-    if (pressedKeys.contains(Qt::Key_Space)) cameraPos += up * cameraSpeed * deltaTime;
+    D3DXVECTOR3 forward;
+    forward.x = std::sin(yaw) * std::cos(pitch);
+    forward.y = std::sin(pitch);
+    forward.z = std::cos(yaw) * std::cos(pitch);
+    D3DXVec3Normalize(&cameraDir, &forward);
 
     D3DXMATRIX view;
     D3DXVECTOR3 lookAt = cameraPos + cameraDir;
     D3DXMatrixLookAtLH(&view, &cameraPos, &lookAt, &cameraUp);
     device->SetTransform(D3DTS_VIEW, &view);
+
+    QCursor::setPos(globalCenter);
+    ignoreNextMouseMove = true;
+}
+
+
+void Viewport::updateCamera(float deltaTime) {
+    D3DXVECTOR3 right;
+    D3DXVec3Cross(&right, &cameraUp, &cameraDir);
+    D3DXVec3Normalize(&right, &right);
+
+    const float moveSpeed = 10.0f * deltaTime;
+    if (pressedKeys.contains(Qt::Key_W)) {
+        cameraPos += cameraDir * moveSpeed;
+    }
+    if (pressedKeys.contains(Qt::Key_S)) {
+        cameraPos -= cameraDir * moveSpeed;
+    }
+    if (pressedKeys.contains(Qt::Key_A)) {
+        cameraPos -= right * moveSpeed;
+    }
+    if (pressedKeys.contains(Qt::Key_D)) {
+        cameraPos += right * moveSpeed;
+    }
+    if (pressedKeys.contains(Qt::Key_Q)) {
+        cameraPos -= cameraUp * moveSpeed;
+    }
+    if (pressedKeys.contains(Qt::Key_E)) {
+        cameraPos += cameraUp * moveSpeed;
+    }
+
+    // Update view matrix
+    D3DXMATRIX view;
+    D3DXVECTOR3 lookAt = cameraPos + cameraDir;
+    D3DXMatrixLookAtLH(&view, &cameraPos, &lookAt, &cameraUp);
+    device->SetTransform(D3DTS_VIEW, &view);
+}
+
+void Viewport::syncYawPitchWithCameraDir()
+{
+    D3DXVec3Normalize(&cameraDir, &cameraDir);
+    pitch = asinf(cameraDir.y);
+    yaw = atan2f(cameraDir.x, cameraDir.z);
 }
 
 void Viewport::applyCommonRenderStates() {
@@ -480,19 +489,56 @@ void Viewport::drawGizmo()
     auto* tr = selectedObject->getComponent<Transform>();
     if (!tr) return;
 
-    D3DXVECTOR3 origin = tr->position;
+    const auto& position = tr->getPosition();
 
-    float distance = D3DXVec3Length(&(cameraPos - origin));
-    float baseSize = 0.5f;
-    float scale = distance * baseSize / 10.0f;
-    scale = std::clamp(scale, 0.1f, 2.0f);
+    QPoint center = projectToScreen(position, device);
 
-    gizmoLine->SetWidth(2.0f);
-    gizmoLine->SetPattern(0xFFFF);
+    D3DXVECTOR3 origin = position;
+    struct AxeDraw { D3DXVECTOR3 dir; D3DCOLOR color; };
+    AxeDraw axes[3] = {
+        {{1,0,0}, D3DCOLOR_XRGB(255, 0, 0)},
+        {{0,1,0}, D3DCOLOR_XRGB(0, 255, 0)},
+        {{0,0,1}, D3DCOLOR_XRGB(0, 0, 255)}
+    };
 
-    drawGizmoArrow(origin, D3DXVECTOR3(1, 0, 0), D3DCOLOR_XRGB(255, 0, 0), scale);
-    drawGizmoArrow(origin, D3DXVECTOR3(0, 1, 0), D3DCOLOR_XRGB(0, 255, 0), scale);
-    drawGizmoArrow(origin, D3DXVECTOR3(0, 0, 1), D3DCOLOR_XRGB(0, 0, 255), scale);
+    struct DepthAxis { float depth; AxeDraw ad; };
+    std::vector<DepthAxis> list;
+    for (auto& a : axes) {
+        D3DXVECTOR3 mid = origin + a.dir * (GIZMO_LENGTH * 0.5f);
+        D3DXVECTOR3 viewPt;
+        D3DXMATRIX view; device->GetTransform(D3DTS_VIEW, &view);
+        D3DXVec3TransformCoord(&viewPt, &mid, &view);
+        list.push_back({ viewPt.z, a });
+    }
+    std::sort(list.begin(), list.end(),
+        [](auto& a, auto& b) { return a.depth < b.depth; });
+
+    for (int i = 0; i < 3; ++i) {
+        float width = (i == 0 ? 3.0f : 1.5f);
+        gizmoLine->SetWidth(width);
+        D3DXVECTOR3 p0 = origin;
+        D3DXVECTOR3 p1 = origin + list[i].ad.dir * GIZMO_LENGTH;
+        QPoint s0 = projectToScreen(p0, device);
+        QPoint s1 = projectToScreen(p1, device);
+        D3DXVECTOR2 pts[2] = {
+            D3DXVECTOR2(s0.x(), s0.y()),
+            D3DXVECTOR2(s1.x(), s1.y())
+        };
+        gizmoLine->Draw(pts, 2, list[i].ad.color);
+    }
+}
+
+QPoint Viewport::projectToScreen(const D3DXVECTOR3& p, IDirect3DDevice9* dev)
+{
+    D3DVIEWPORT9 vp; dev->GetViewport(&vp);
+    D3DXMATRIX view, proj, world;
+    dev->GetTransform(D3DTS_VIEW, &view);
+    dev->GetTransform(D3DTS_PROJECTION, &proj);
+    D3DXMatrixIdentity(&world);
+
+    D3DXVECTOR3 sp;
+    D3DXVec3Project(&sp, &p, &vp, &proj, &view, &world);
+    return QPoint(int(sp.x), int(sp.y));
 }
 
 float Viewport::DistanceRayToLine(const D3DXVECTOR3& rayO, const D3DXVECTOR3& rayD, const D3DXVECTOR3& lineP, const D3DXVECTOR3& lineDir)

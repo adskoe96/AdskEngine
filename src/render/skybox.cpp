@@ -1,7 +1,6 @@
+#include "ConsolePanel.h"
 #include "Skybox.h"
-
 #include <QDebug>
-#include <ConsolePanel.h>
 
 struct SkyboxVertex {
     float x, y, z;

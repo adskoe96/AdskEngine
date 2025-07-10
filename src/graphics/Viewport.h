@@ -51,10 +51,12 @@ private:
     void cleanup();
     void render();
     void updateCamera(float deltaTime);
+    void syncYawPitchWithCameraDir();
     void applyCommonRenderStates();
     void BuildPickingRay(const QPoint& mousePos, D3DXVECTOR3& outOrigin, D3DXVECTOR3& outDir);
     void drawGizmoArrow(const D3DXVECTOR3& start, const D3DXVECTOR3& direction, D3DCOLOR color, float length);
     void drawGizmo();
+    static QPoint projectToScreen(const D3DXVECTOR3& p, IDirect3DDevice9* dev);
 
     float DistanceRayToLine(const D3DXVECTOR3& rayO, const D3DXVECTOR3& rayD, const D3DXVECTOR3& lineP, const D3DXVECTOR3& lineDir);
     D3DXVECTOR3 ProjectPointOnLine(const D3DXVECTOR3& rayO, const D3DXVECTOR3& rayD, const D3DXVECTOR3& lineP, const D3DXVECTOR3& lineDir);
@@ -76,16 +78,23 @@ private:
     bool cameraInitialized = false;
 
     // Input
-    bool rightMouseHeld = false;
     QPoint lastMouseMovePos;
+    QPoint lastGlobalMousePos;
     QSet<int> pressedKeys;
     QElapsedTimer elapsedTimer;
     QPoint mouseCenterPos;
+    QPoint mouseDeltaAccum;
+    bool rightMouseHeld = false;
     bool cursorLocked = false;
+    bool ignoreNextMouseMove = false;
+	bool mouseReadyForCamera = false;
+    bool ignoreFirstMouseMove = false;
 
     // Gizmo settings
     DragAxis dragging = DragAxis::None;
     D3DXVECTOR3 dragStartWorld;
     D3DXVECTOR3 dragAxisDir;
     D3DXVECTOR3 objStartPos;
+    float GIZMO_LENGTH = 1.0f;
+    float GIZMO_PICK_THRESHOLD = 6.0f;
 };

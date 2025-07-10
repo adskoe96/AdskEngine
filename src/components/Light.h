@@ -24,5 +24,7 @@ public:
     LightType type = LightType::Point;
     D3DCOLORVALUE color{ 1,1,1,1 };
     float intensity = 1.0f;
+    float radius = 100.0f;
+    float spotFalloff = 45.0f;
     int index = 0;
 };

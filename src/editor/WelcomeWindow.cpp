@@ -106,7 +106,7 @@ void WelcomeWindow::onOpenProject() {
         QString projectName = obj["name"].toString();
         QString description = obj["description"].toString();
 
-        QMessageBox::information(this, "Project Loaded", "Project: " + projectName + "\n" + description);
+        //QMessageBox::information(this, "Project Loaded", "Project: " + projectName + "\n" + description);
 
         QFileInfo fileInfo(filePath);
         QString projectPath = fileInfo.absolutePath();

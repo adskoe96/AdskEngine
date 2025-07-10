@@ -1,4 +1,5 @@
 #pragma once
+
 #include <QObject>
 #include <vector>
 #include <memory>
@@ -7,6 +8,7 @@
 #include <algorithm>
 #include <cassert>
 #include <d3d9.h>
+
 #include "Component.h"
 #include "Transform.h"
 
