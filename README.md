@@ -9,10 +9,10 @@
 
 ### Interface  
 Welcome screen  
-[![img]](https://github.com/adskoe96/AdskEngine/blob/master/res/WelcomeWindow.png)
+![WelcomeWindow](https://github.com/adskoe96/AdskEngine/blob/master/res/WelcomeWindow.png)
 
 Editor layout  
-[![img]](https://github.com/adskoe96/AdskEngine/blob/master/res/EditorWindow.png)
+![EditorLayout](https://github.com/adskoe96/AdskEngine/blob/master/res/EditorWindow.png)
 
 
 ### Dependencies  
