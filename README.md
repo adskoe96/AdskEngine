@@ -7,3 +7,15 @@ vcpkg install qt5
 vcpkg install assimp
 vcpkg install joltphysics
 ```
+
+completed plans:
+- [x] Components System
+- [x] Transform Component
+- [x] MeshRenderer Component
+- [x] Light Component
+- [ ] Materials System
+- [ ] C# Scripts
+- [ ] Debug System
+- [ ] Build System
+- [ ] UI System
+- [ ] Physics Components (Colliders, Rigidbodies)
