@@ -7,6 +7,14 @@
 ![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey)
 ![Active](https://img.shields.io/badge/Status-Active-brightgreen)
 
+### Interface  
+Welcome screen  
+[![img]](./res/WelcomeWindow.png)
+
+Editor layout
+[![img]](./res/EditorWindow.png)
+
+
 ### Dependencies  
 Install using [vcpkg](https://github.com/microsoft/vcpkg)
 ```bash
