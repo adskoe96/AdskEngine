@@ -9,10 +9,10 @@
 
 ### Interface  
 Welcome screen  
-[![img]](./res/WelcomeWindow.png)
+[![img]](https://github.com/adskoe96/AdskEngine/blob/master/res/WelcomeWindow.png)
 
-Editor layout
-[![img]](./res/EditorWindow.png)
+Editor layout  
+[![img]](https://github.com/adskoe96/AdskEngine/blob/master/res/EditorWindow.png)
 
 
 ### Dependencies  
@@ -39,7 +39,7 @@ vcpkg install joltphysics
 - [ ] Physics Components (Colliders, Rigidbodies)
 
 ### Visitors  
-[![img](https://count.getloli.com/@AdskEngine?name=Moe-counter.github&theme=booru-lewd&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto)
+[![img]](https://count.getloli.com/@AdskEngine?name=Moe-counter.github&theme=booru-lewd&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto)
 
 ### Contributing  
 Pull requests are welcome! Open issues if you find a bug or want to suggest an improvement.
