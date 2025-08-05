@@ -9,11 +9,12 @@ vcpkg install joltphysics
 ```
 
 completed plans:
+- [x] Save/Load scene
 - [x] Components System
 - [x] Transform Component
 - [x] MeshRenderer Component
 - [x] Light Component
-- [ ] Materials System
+- [ ] Materials System (shaders and material settings)
 - [ ] C# Scripts
 - [ ] Debug System
 - [ ] Build System
