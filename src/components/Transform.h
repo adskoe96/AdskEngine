@@ -5,7 +5,9 @@
 #include <QSlider>
 #include <QFormLayout>
 #include <QWidget>
+#include <QJsonObject>
 #include <d3dx9math.h>
+
 
 class SceneObject;
 
@@ -13,6 +15,11 @@ class Transform : public Component {
     Q_OBJECT
 public:
     explicit Transform(QObject* parent = nullptr) : Component(parent) {}
+
+    QJsonObject serialize() const override;
+    void deserialize(const QJsonObject& data) override;
+
+    std::string getTypeName() const override { return "Transform"; }
 
     void setPositionX(float x) { setPosition({ x, position.y, position.z }); }
     void setPositionY(float y) { setPosition({ position.x, y, position.z }); }
@@ -35,7 +42,6 @@ public:
     const D3DXVECTOR3& getScale() const { return scale; }
 
     D3DXMATRIX getWorldMatrix() const;
-
     void createInspector(QWidget* parent, QFormLayout* layout) override;
 
 private:

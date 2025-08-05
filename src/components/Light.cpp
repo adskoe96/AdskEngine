@@ -5,6 +5,26 @@
 #include <algorithm>
 #include <QLabel>
 
+QJsonObject Light::serialize() const
+{
+    QJsonObject jsL;
+    jsL["type"] = int(type);
+    jsL["intensity"] = intensity;
+    jsL["colorR"] = color.r;
+    jsL["colorG"] = color.g;
+    jsL["colorB"] = color.b;
+    return jsL;
+}
+
+void Light::deserialize(const QJsonObject& data)
+{
+    type = static_cast<LightType>(data["type"].toInt());
+    intensity = static_cast<float>(data["intensity"].toDouble());
+    color.r = static_cast<float>(data["colorR"].toDouble());
+    color.g = static_cast<float>(data["colorG"].toDouble());
+    color.b = static_cast<float>(data["colorB"].toDouble());
+}
+
 void Light::render(LPDIRECT3DDEVICE9 device)
 {
     D3DLIGHT9 L{};

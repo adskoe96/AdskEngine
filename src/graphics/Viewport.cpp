@@ -91,7 +91,7 @@ bool Viewport::initD3D() {
 
     // Setup render states
     device->SetRenderState(D3DRS_ZENABLE, TRUE);
-    device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
+    device->SetRenderState(D3DRS_CULLMODE, D3DCULL_CCW);
     device->SetRenderState(D3DRS_LIGHTING, scene->getLightingEnabled() ? TRUE : FALSE);
 
     // Projection matrix
@@ -319,6 +319,19 @@ void Viewport::mouseReleaseEvent(QMouseEvent* ev) {
 }
 
 void Viewport::mouseMoveEvent(QMouseEvent* ev) {
+    if (dragging != DragAxis::None && selectedObject) {
+        D3DXVECTOR3 rayO, rayD;
+        BuildPickingRay(ev->pos(), rayO, rayD);
+        D3DXVECTOR3 currentProj = ProjectPointOnLine(rayO, rayD, objStartPos, dragAxisDir);
+        D3DXVECTOR3 delta = currentProj - dragStartWorld;
+        float offset = D3DXVec3Dot(&delta, &dragAxisDir);
+        D3DXVECTOR3 newPos = objStartPos + dragAxisDir * offset;
+        auto* tr = selectedObject->getComponent<Transform>();
+        if (tr) {
+            tr->setPosition(newPos);
+        }
+    }
+
     if (!rightMouseHeld)
     {
         return QWidget::mouseMoveEvent(ev);
@@ -597,9 +610,7 @@ void Viewport::render() {
     if (deltaTime > 0.1f) deltaTime = 0.016f;
 
     updateCamera(deltaTime);
-
-    device->Clear(0, nullptr, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER,
-        D3DCOLOR_XRGB(30, 30, 30), 1.0f, 0);
+    device->Clear(0, nullptr, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, D3DCOLOR_XRGB(30, 30, 30), 1.0f, 0);
 
     if (SUCCEEDED(device->BeginScene())) {
         if (scene->getSkybox()) {

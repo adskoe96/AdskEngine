@@ -15,6 +15,18 @@
 #include <QMessageBox>
 
 
+QJsonObject MeshRenderer::serialize() const
+{
+    QJsonObject jsMr;
+    jsMr["meshPath"] = meshPath;
+    return jsMr;
+}
+
+void MeshRenderer::deserialize(const QJsonObject& data)
+{
+    setMeshPath(data["meshPath"].toString());
+}
+
 void MeshRenderer::render(LPDIRECT3DDEVICE9 device) {
     if (!mesh || mesh->vertices.empty()) return;
 
@@ -148,6 +160,11 @@ bool MeshRenderer::restoreDeviceObjects(LPDIRECT3DDEVICE9 device) {
 
     needsRestore = false;
     return true;
+}
+
+void MeshRenderer::onPropertiesChanged()
+{
+    worldMatrixValid = false;
 }
 
 void MeshRenderer::setMeshPath(const QString& path)

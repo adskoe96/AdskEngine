@@ -1,13 +1,14 @@
 #include "Toolbar.h"
+#include "Scene.h"
+#include "Light.h"
+#include "MeshRenderer.h"
+#include "ConsolePanel.h"
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QToolButton>
 #include <QMenu>
 #include <QAction>
-#include "Scene.h"
-#include "Light.h"
 #include <QFileDialog>
-#include <MeshRenderer.h>
 
 Toolbar::Toolbar(Scene* scene, QWidget* parent)
     : QWidget(parent), scene(scene)
@@ -30,6 +31,7 @@ Toolbar::Toolbar(Scene* scene, QWidget* parent)
         auto obj = std::make_unique<SceneObject>("Light");
         auto* light = obj->addComponent<Light>();
         scenePtr->addObject(std::move(obj));
+        ConsolePanel::sLog(LogType::Info, "Light has been added to scene");
     });
     createMenu->addAction(createLightAction);
 

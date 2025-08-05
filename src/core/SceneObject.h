@@ -1,6 +1,8 @@
 #pragma once
 
 #include <QObject>
+#include <QJsonObject>
+#include <QJsonArray>
 #include <vector>
 #include <memory>
 #include <typeindex>
@@ -19,6 +21,22 @@ public:
         : QObject(parent), name(name)
     {
         addComponent<Transform>(this);
+    }
+
+    QJsonObject SceneObject::serialize() const {
+        QJsonObject o;
+        o["name"] = QString::fromStdString(name);
+
+        QJsonArray componentsArray;
+        for (const auto& comp : orderedComponents) {
+            QJsonObject compObj;
+            compObj["type"] = QString::fromStdString(comp->getTypeName());
+            compObj["data"] = comp->serialize();
+            componentsArray.append(compObj);
+        }
+        o["components"] = componentsArray;
+
+        return o;
     }
 
     void setName(std::string value) {
@@ -41,6 +59,7 @@ public:
         components[idx] = std::move(comp);
         orderedComponents.push_back(ptr);
         ptr->onAttach();
+        connect(this, &SceneObject::propertiesChanged, ptr, &Component::onPropertiesChanged);
         return ptr;
     }
 

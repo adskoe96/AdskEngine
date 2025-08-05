@@ -6,6 +6,7 @@
 
 #include <d3dx9.h>
 #include <QString>
+#include <QJsonObject>
 #include <vector>
 
 struct Vertex {
@@ -31,11 +32,17 @@ public:
     MeshRenderer() = default;
     ~MeshRenderer() override { invalidate(); }
 
+    QJsonObject serialize() const override;
+    void deserialize(const QJsonObject& data) override;
+
+    std::string getTypeName() const override { return "MeshRenderer"; }
+
     void render(LPDIRECT3DDEVICE9 device) override;
     void createInspector(QWidget* parent, QFormLayout* layout) override;
 
     void invalidateDeviceObjects() override;
     bool restoreDeviceObjects(LPDIRECT3DDEVICE9 device) override;
+    void onPropertiesChanged() override;
 
     void setMeshPath(const QString& path);
     const QString& getMeshPath() const { return meshPath; }

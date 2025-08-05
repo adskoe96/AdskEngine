@@ -21,6 +21,42 @@ D3DXMATRIX Transform::getWorldMatrix() const {
     return cachedWorldMatrix;
 }
 
+QJsonObject Transform::serialize() const
+{
+    QJsonObject jsTr;
+    jsTr["posX"] = position.x;
+    jsTr["posY"] = position.y;
+    jsTr["posZ"] = position.z;
+    jsTr["rotX"] = rotation.x;
+    jsTr["rotY"] = rotation.y;
+    jsTr["rotZ"] = rotation.z;
+    jsTr["scaleX"] = scale.x;
+    jsTr["scaleY"] = scale.y;
+    jsTr["scaleZ"] = scale.z;
+    return jsTr;
+}
+
+void Transform::deserialize(const QJsonObject& data)
+{
+    setPosition({
+        static_cast<float>(data["posX"].toDouble()),
+        static_cast<float>(data["posY"].toDouble()),
+        static_cast<float>(data["posZ"].toDouble())
+        });
+
+    setRotation({
+        static_cast<float>(data["rotX"].toDouble()),
+        static_cast<float>(data["rotY"].toDouble()),
+        static_cast<float>(data["rotZ"].toDouble())
+        });
+
+    setScale({
+        static_cast<float>(data["scaleX"].toDouble()),
+        static_cast<float>(data["scaleY"].toDouble()),
+        static_cast<float>(data["scaleZ"].toDouble())
+        });
+}
+
 void Transform::createInspector(QWidget* parent, QFormLayout* layout)
 {
     // Label of component

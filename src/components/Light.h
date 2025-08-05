@@ -7,6 +7,7 @@
 #include <QPushButton>
 #include <QColorDialog>
 #include <QFormLayout>
+#include <QJsonObject>
 
 class SceneObject;
 class Transform;
@@ -17,6 +18,11 @@ class Light : public Component {
     Q_OBJECT
 public:
     explicit Light(QObject* parent = nullptr) : Component(parent) {}
+
+    QJsonObject serialize() const override;
+    void deserialize(const QJsonObject& data) override;
+
+    std::string getTypeName() const override { return "Light"; }
 
     void render(LPDIRECT3DDEVICE9 device) override;
     void createInspector(QWidget* parent, QFormLayout* layout) override;

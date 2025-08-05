@@ -92,45 +92,7 @@ void Scene::saveToFile(const QString& filePath) {
 
     QJsonArray objArray;
     for (const auto& objPtr : objects) {
-        SceneObject* obj = objPtr.get();
-        QJsonObject o;
-
-        // Always Transform
-        if (auto* tr = obj->getComponent<Transform>()) {
-            QJsonObject jsTr;
-            const auto& pos = tr->getPosition();
-            const auto& rot = tr->getRotation();
-            const auto& scl = tr->getScale();
-
-            jsTr["posX"] = pos.x;
-            jsTr["posY"] = pos.y;
-            jsTr["posZ"] = pos.z;
-            jsTr["rotX"] = rot.x;
-            jsTr["rotY"] = rot.y;
-            jsTr["rotZ"] = rot.z;
-            jsTr["scaleX"] = scl.x;
-            jsTr["scaleY"] = scl.y;
-            jsTr["scaleZ"] = scl.z;
-            o["Transform"] = jsTr;
-        }
-
-        // MeshRenderer?
-        if (obj->getComponent<MeshRenderer>()) {
-            o["MeshRenderer"] = true;
-        }
-
-        // Light?
-        if (auto* light = obj->getComponent<Light>()) {
-            QJsonObject jsL;
-            jsL["type"] = int(light->type);
-            jsL["intensity"] = light->intensity;
-            jsL["colorR"] = light->color.r;
-            jsL["colorG"] = light->color.g;
-            jsL["colorB"] = light->color.b;
-            o["Light"] = jsL;
-        }
-
-        objArray.append(o);
+        objArray.append(objPtr->serialize());
     }
     root["objects"] = objArray;
 
@@ -144,11 +106,18 @@ void Scene::saveToFile(const QString& filePath) {
 
 void Scene::loadFromFile(const QString& filePath) {
     QFile f(filePath);
-    if (!f.open(QIODevice::ReadOnly))
+    if (!f.open(QIODevice::ReadOnly)) {
+        ConsolePanel::sError("Failed to open scene file: " + filePath);
         return;
+    }
 
-    auto doc = QJsonDocument::fromJson(f.readAll());
-    auto root = doc.object();
+    QJsonDocument doc = QJsonDocument::fromJson(f.readAll());
+    if (doc.isNull()) {
+        ConsolePanel::sError("Invalid JSON in scene file: " + filePath);
+        return;
+    }
+
+    QJsonObject root = doc.object();
 
     auto ambient = root["ambientColor"].toObject();
     ambientColor.r = ambient["r"].toDouble();
@@ -162,56 +131,40 @@ void Scene::loadFromFile(const QString& filePath) {
     skyboxPath = root["skyboxPath"].toString().toStdString();
 
     objects.clear();
+
     QJsonArray objArray = root["objects"].toArray();
-    for (auto v : objArray) {
-        auto jsObj = v.toObject();
-        auto newObj = std::make_unique<SceneObject>("Entity");
+    for (const auto& objValue : objArray) {
+        QJsonObject jsObj = objValue.toObject();
 
-        // Transform
-        if (jsObj.contains("Transform")) {
-            auto jsTr = jsObj["Transform"].toObject();
-            auto* tr = newObj->getComponent<Transform>();
+        std::string name = jsObj["name"].toString().toStdString();
+        auto newObj = std::make_unique<SceneObject>(name);
 
-            tr->setPosition({
-                static_cast<float>(jsTr["posX"].toDouble()),
-                static_cast<float>(jsTr["posY"].toDouble()),
-                static_cast<float>(jsTr["posZ"].toDouble())
-                });
+        QJsonArray components = jsObj["components"].toArray();
+        for (const auto& compValue : components) {
+            QJsonObject compObj = compValue.toObject();
+            QString type = compObj["type"].toString();
+            QJsonObject data = compObj["data"].toObject();
 
-            tr->setRotation({
-                static_cast<float>(jsTr["rotX"].toDouble()),
-                static_cast<float>(jsTr["rotY"].toDouble()),
-                static_cast<float>(jsTr["rotZ"].toDouble())
-                });
-
-            tr->setScale({
-                static_cast<float>(jsTr["scaleX"].toDouble()),
-                static_cast<float>(jsTr["scaleY"].toDouble()),
-                static_cast<float>(jsTr["scaleZ"].toDouble())
-                });
-        }
-
-        // MeshRenderer
-        if (jsObj.contains("MeshRenderer") && jsObj["MeshRenderer"].toBool()) {
-            newObj->addComponent<MeshRenderer>();
-        }
-
-        // Light
-        if (jsObj.contains("Light")) {
-            auto jsL = jsObj["Light"].toObject();
-            auto* light = newObj->addComponent<Light>();
-            light->type = LightType(jsL["type"].toInt());
-            light->intensity = jsL["intensity"].toDouble();
-            light->color.r = jsL["colorR"].toDouble();
-            light->color.g = jsL["colorG"].toDouble();
-            light->color.b = jsL["colorB"].toDouble();
-            light->color.a = 1.0f;
+            if (type == "Transform") {
+                if (auto* tr = newObj->getComponent<Transform>()) {
+                    tr->deserialize(data);
+                }
+            }
+            else if (type == "MeshRenderer") {
+                if (auto* mr = newObj->addComponent<MeshRenderer>()) {
+                    mr->deserialize(data);
+                }
+            }
+            else if (type == "Light") {
+                if (auto* light = newObj->addComponent<Light>()) {
+                    light->deserialize(data);
+                }
+            }
         }
 
         addObject(std::move(newObj));
     }
 
-    // Mark for reload
     skyboxDirty = true;
     lightingDirty = true;
 
