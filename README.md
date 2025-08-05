@@ -30,13 +30,14 @@ vcpkg install joltphysics
 - [x] Transform Component
 - [x] MeshRenderer Component (FBX, OBJ)
 - [x] Light Component (Point, Spotlight, Directional)
+- [ ] Animation Component (animations imported from models)
 - [ ] Materials System (shaders and material settings)
+- [ ] Physics Components (Colliders, Rigidbodies)
 - [ ] Particles System
 - [ ] UI System
 - [ ] C# Scripts
 - [ ] Debug System
 - [ ] Build System
-- [ ] Physics Components (Colliders, Rigidbodies)
 
 ### Visitors  
 ![AdskEngineVisitors](https://count.getloli.com/@AdskEngine?name=Moe-counter.github&theme=booru-lewd&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto)
