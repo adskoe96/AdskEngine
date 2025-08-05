@@ -1,22 +1,40 @@
-# AdskEngine
-## based on DirectX 9 and Qt5  
-vcpkg req:  
-```
+# AdskEngine  
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![DirectX 9](https://img.shields.io/badge/DirectX-9-0078d7?logo=directx)
+![Qt5](https://img.shields.io/badge/Qt-5-41CD52?logo=qt)
+![C++](https://img.shields.io/badge/C%2B%2B-17-blue.svg)
+![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey)
+![Active](https://img.shields.io/badge/Status-Active-brightgreen)
+
+### Dependencies  
+Install using [vcpkg](https://github.com/microsoft/vcpkg)
+```bash
 vcpkg install dxsdk-d3dx
 vcpkg install qt5
 vcpkg install assimp
 vcpkg install joltphysics
 ```
 
-completed plans:
+### Current AdskEngine progress  
 - [x] Save/Load scene
 - [x] Components System
 - [x] Transform Component
-- [x] MeshRenderer Component
-- [x] Light Component
+- [x] MeshRenderer Component (FBX, OBJ)
+- [x] Light Component (Point, Spotlight, Directional)
 - [ ] Materials System (shaders and material settings)
+- [ ] Particles System
+- [ ] UI System
 - [ ] C# Scripts
 - [ ] Debug System
 - [ ] Build System
-- [ ] UI System
 - [ ] Physics Components (Colliders, Rigidbodies)
+
+### Visitors  
+[![img]([https://count.getloli.com/@adskoe96.github?name=Moe-counter.github&theme=booru-lewd&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto](https://count.getloli.com/@AdskEngine?name=AdskEngine&theme=rule34&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto))](https://count.getloli.com/@AdskEngine?name=AdskEngine&theme=rule34&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto)
+
+### Contributing  
+Pull requests are welcome! Open issues if you find a bug or want to suggest an improvement.
+
+### License  
+This project is licensed under the [MIT](https://opensource.org/license/MIT) license.
