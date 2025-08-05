@@ -31,7 +31,7 @@ vcpkg install joltphysics
 - [ ] Physics Components (Colliders, Rigidbodies)
 
 ### Visitors  
-[![img]([https://count.getloli.com/@adskoe96.github?name=Moe-counter.github&theme=booru-lewd&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto](https://count.getloli.com/@AdskEngine?name=AdskEngine&theme=rule34&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto))](https://count.getloli.com/@AdskEngine?name=AdskEngine&theme=rule34&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto)
+[![img](https://count.getloli.com/@AdskEngine?name=Moe-counter.github&theme=booru-lewd&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto)
 
 ### Contributing  
 Pull requests are welcome! Open issues if you find a bug or want to suggest an improvement.
