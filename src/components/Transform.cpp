@@ -1,6 +1,5 @@
 #include "Transform.h"
 #include "SceneObject.h"
-#include <QLabel>
 
 D3DXMATRIX Transform::getWorldMatrix() const {
     if (isDirty) {
@@ -59,17 +58,14 @@ void Transform::deserialize(const QJsonObject& data)
 
 void Transform::createInspector(QWidget* parent, QFormLayout* layout)
 {
-    // Label of component
-    auto* transformLabel = new QLabel("Transform", parent);
+    transformLabel = new QLabel("Transform", parent);
     layout->addRow(transformLabel);
 
-    // Position
     auto createInput = [parent, layout](const QString& label, float value, auto setter) {
         auto* spinner = new QDoubleSpinBox(parent);
         spinner->setRange(-100000, 100000);
         spinner->setValue(value);
 
-        // Исправленный connect с явным указанием перегрузки
         QObject::connect(spinner, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
             [setter](double v) { (setter)(static_cast<float>(v)); });
 
@@ -77,17 +73,14 @@ void Transform::createInspector(QWidget* parent, QFormLayout* layout)
         return spinner;
     };
 
-    // Position
     createInput("Position X", position.x, [this](float v) { setPositionX(v); });
     createInput("Position Y", position.y, [this](float v) { setPositionY(v); });
     createInput("Position Z", position.z, [this](float v) { setPositionZ(v); });
 
-    // Rotation
     createInput("Rotation X", rotation.x, [this](float v) { setRotationX(v); });
     createInput("Rotation Y", rotation.y, [this](float v) { setRotationY(v); });
     createInput("Rotation Z", rotation.z, [this](float v) { setRotationZ(v); });
 
-    // Scale
     createInput("Scale X", scale.x, [this](float v) { setScaleX(v); });
     createInput("Scale Y", scale.y, [this](float v) { setScaleY(v); });
     createInput("Scale Z", scale.z, [this](float v) { setScaleZ(v); });

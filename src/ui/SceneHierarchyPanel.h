@@ -6,6 +6,7 @@
 #include <QEvent>
 #include <QMouseEvent>
 #include <QPointer>
+#include <QMenu>
 
 class Scene;
 
@@ -27,7 +28,13 @@ private slots:
     void onObjectNameChanged(const std::string& newName);
 
 private:
+    void keyPressEvent(QKeyEvent* event) override;
+
     Scene* scene;
     QTreeWidget* treeWidget;
     QMap<QTreeWidgetItem*, QPointer<SceneObject>> itemObjectMap;
+
+    QMenu* contextMenu;
+    QAction* renameAction;
+    QAction* deleteAction;
 };

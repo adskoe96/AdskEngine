@@ -14,7 +14,6 @@
 #include <QLineEdit>
 #include <QMessageBox>
 
-
 QJsonObject MeshRenderer::serialize() const
 {
     QJsonObject jsMr;
@@ -46,14 +45,12 @@ void MeshRenderer::render(LPDIRECT3DDEVICE9 device) {
     device->GetTransform(D3DTS_WORLD, &old);
     device->SetTransform(D3DTS_WORLD, &cachedWorldMatrix);
 
-    // Material settings
     D3DMATERIAL9 material;
     ZeroMemory(&material, sizeof(material));
     material.Diffuse = D3DXCOLOR(1.0f, 1.0f, 1.0f, 1.0f);
     material.Ambient = D3DXCOLOR(1.0f, 1.0f, 1.0f, 1.0f);
     device->SetMaterial(&material);
 
-    // Saving lighting state
     DWORD lightingState;
     device->GetRenderState(D3DRS_LIGHTING, &lightingState);
     device->SetRenderState(D3DRS_LIGHTING, TRUE);
@@ -70,23 +67,22 @@ void MeshRenderer::render(LPDIRECT3DDEVICE9 device) {
         mesh->indices.size() / 3
     );
 
-    // Restoration of condition
     device->SetTransform(D3DTS_WORLD, &old);
     device->SetRenderState(D3DRS_LIGHTING, lightingState);
 }
 
 void MeshRenderer::createInspector(QWidget* parent, QFormLayout* layout) {
-    QLabel* label = new QLabel("Mesh Renderer", parent);
-    layout->addRow(label);
+    mrLabel = new QLabel("Mesh Renderer", parent);
+    layout->addRow(mrLabel);
 
     QLineEdit* pathField = new QLineEdit(meshPath, parent);
     pathField->setReadOnly(true);
     layout->addRow("Model Path", pathField);
 
-    QPushButton* browse = new QPushButton("Load Model", parent);
-    layout->addRow("", browse);
+    QPushButton* browseBtn = new QPushButton("Load Model", parent);
+    layout->addRow("", browseBtn);
 
-    connect(browse, &QPushButton::clicked, [this, pathField]() {
+    connect(browseBtn, &QPushButton::clicked, [this, pathField]() {
         QString file = QFileDialog::getOpenFileName(nullptr, "Choose Model", "",
             "Model Files (*.fbx *.obj *.dae *.gltf)");
 

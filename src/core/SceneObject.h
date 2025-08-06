@@ -13,14 +13,14 @@
 
 #include "Component.h"
 #include "Transform.h"
+class Transform;
 
 class SceneObject : public QObject {
     Q_OBJECT
 public:
-    explicit SceneObject(const std::string& name = "Entity", QObject* parent = nullptr)
-        : QObject(parent), name(name)
+    explicit SceneObject(const std::string& name = "Entity", QObject* parent = nullptr) : QObject(parent), name(name)
     {
-        addComponent<Transform>(this);
+        this->addComponent<Transform>(this);
     }
 
     QJsonObject SceneObject::serialize() const {

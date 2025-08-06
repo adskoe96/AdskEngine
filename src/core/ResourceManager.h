@@ -1,9 +1,9 @@
 #pragma once
 
+#include "MeshRenderer.h"
 #include <QString>
 #include <memory>
 #include <unordered_map>
-#include "MeshRenderer.h"
 
 class ResourceManager {
 public:

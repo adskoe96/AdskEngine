@@ -1,16 +1,16 @@
 #include "Scene.h"
+#include "Light.h"
+#include "MeshRenderer.h"
+#include "ConsolePanel.h"
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QDebug>
 #include <QFile>
-#include "Light.h"
-#include "MeshRenderer.h"
-#include <ConsolePanel.h>
 #include <QApplication>
 
-Scene::Scene(QObject* parent)
-    : QObject(parent)
+Scene::Scene(QObject* parent) : QObject(parent)
 {
+    PhysicsSystem::getInstance().initialize(this);
     ambientColor.r = 0.2f;
     ambientColor.g = 0.2f;
     ambientColor.b = 0.2f;
@@ -53,6 +53,22 @@ void Scene::render(LPDIRECT3DDEVICE9 device) {
 
 const std::vector<std::unique_ptr<SceneObject>>& Scene::getObjects() const {
     return objects;
+}
+
+void Scene::physicsUpdate(float deltaTime)
+{
+    PhysicsSystem::getInstance().simulate(deltaTime);
+}
+
+void Scene::setPhysicsEnabled(bool enabled)
+{
+    if (enabled) {
+        PhysicsSystem::getInstance().saveState();
+    }
+    else {
+        PhysicsSystem::getInstance().restoreState();
+    }
+    PhysicsSystem::getInstance().setSimulationEnabled(enabled);
 }
 
 void Scene::invalidateDeviceObjects() {

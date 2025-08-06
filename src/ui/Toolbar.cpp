@@ -1,14 +1,4 @@
-#include "Toolbar.h"
-#include "Scene.h"
-#include "Light.h"
-#include "MeshRenderer.h"
-#include "ConsolePanel.h"
-#include <QHBoxLayout>
-#include <QPushButton>
-#include <QToolButton>
-#include <QMenu>
-#include <QAction>
-#include <QFileDialog>
+#include <Toolbar.h>
 
 Toolbar::Toolbar(Scene* scene, QWidget* parent)
     : QWidget(parent), scene(scene)
@@ -16,17 +6,15 @@ Toolbar::Toolbar(Scene* scene, QWidget* parent)
     auto* layout = new QHBoxLayout(this);
     layout->setContentsMargins(4, 4, 4, 4);
 
-    // Save the scene pointer in a local variable for explicit capture
     Scene* scenePtr = this->scene;
 
-    // Object creation button with drop-down menu
-    QToolButton* createButton = new QToolButton();
+    createButton = new QToolButton();
     createButton->setText("Create");
     createButton->setPopupMode(QToolButton::InstantPopup);
 
-    QMenu* createMenu = new QMenu(createButton);
+    createMenu = new QMenu(createButton);
 
-    QAction* createLightAction = new QAction("Light", this);
+    createLightAction = new QAction("Light", this);
     connect(createLightAction, &QAction::triggered, [scenePtr]() {
         auto obj = std::make_unique<SceneObject>("Light");
         auto* light = obj->addComponent<Light>();
@@ -35,7 +23,7 @@ Toolbar::Toolbar(Scene* scene, QWidget* parent)
     });
     createMenu->addAction(createLightAction);
 
-    QAction* createMeshAction = new QAction("Mesh", this);
+    createMeshAction = new QAction("Mesh", this);
     connect(createMeshAction, &QAction::triggered, [scenePtr]() {
         auto obj = std::make_unique<SceneObject>("Mesh");
         obj->addComponent<MeshRenderer>();
@@ -43,7 +31,7 @@ Toolbar::Toolbar(Scene* scene, QWidget* parent)
     });
     createMenu->addAction(createMeshAction);
 
-    QAction* createEmptyAction = new QAction("Empty", this);
+    createEmptyAction = new QAction("Empty", this);
     connect(createEmptyAction, &QAction::triggered, [scenePtr]() {
         auto obj = std::make_unique<SceneObject>("Empty");
         scenePtr->addObject(std::move(obj));
@@ -53,36 +41,45 @@ Toolbar::Toolbar(Scene* scene, QWidget* parent)
     createButton->setMenu(createMenu);
     layout->addWidget(createButton);
 
-    // Environment settings button
-    QPushButton* envSettingsButton = new QPushButton("Environment Settings");
+    envSettingsButton = new QPushButton("Environment Settings");
     layout->addWidget(envSettingsButton);
     connect(envSettingsButton, &QPushButton::clicked, [this]() {
         emit environmentSettingsRequested();
     });
 
-    // Save Scene button
-    QPushButton* saveButton = new QPushButton("Save Scene");
+    saveButton = new QPushButton("Save Scene");
     layout->addWidget(saveButton);
     connect(saveButton, &QPushButton::clicked, [this]() {
         QString filePath = QFileDialog::getSaveFileName(nullptr, "Save Scene", "", "Scene Files (*.scene)");
         if (!filePath.isEmpty()) this->scene->saveToFile(filePath);
     });
 
-    // Load Scene button
-    QPushButton* loadButton = new QPushButton("Load Scene");
+    loadButton = new QPushButton("Load Scene");
     layout->addWidget(loadButton);
     connect(loadButton, &QPushButton::clicked, [this]() {
         QString filePath = QFileDialog::getOpenFileName(nullptr, "Load Scene", "", "Scene Files (*.scene)");
         if (!filePath.isEmpty()) this->scene->loadFromFile(filePath);
     });
 
-    // Build button
-    QPushButton* buildButton = new QPushButton("Build");
+    buildButton = new QPushButton("Build");
     layout->addWidget(buildButton);
 
-    // Play button
-    QPushButton* playButton = new QPushButton("Play");
+    playButton = new QPushButton("Play");
     layout->addWidget(playButton);
+
+    connect(playButton, &QPushButton::clicked, [this]() {
+        static bool isPlaying = false;
+        isPlaying = !isPlaying;
+
+        if (isPlaying) {
+            playButton->setText("Stop");
+            this->scene->setPhysicsEnabled(true);
+        }
+        else {
+            playButton->setText("Play");
+            this->scene->setPhysicsEnabled(false);
+        }
+        });
 
     layout->addStretch();
 }

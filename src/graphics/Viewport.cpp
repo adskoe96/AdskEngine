@@ -1,6 +1,5 @@
 ﻿#include "Viewport.h"
 #include "ConsolePanel.h"
-
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <algorithm>
@@ -76,7 +75,6 @@ bool Viewport::initD3D() {
         device->SetTransform(D3DTS_VIEW, &view);
     }
     else {
-        // Initial camera parameters
         cameraPos = { 0,0,-5 };
         cameraDir = { 0,0,1 };
         cameraUp = { 0,1,0 };
@@ -89,29 +87,24 @@ bool Viewport::initD3D() {
         cameraInitialized = true;
     }
 
-    // Setup render states
     device->SetRenderState(D3DRS_ZENABLE, TRUE);
     device->SetRenderState(D3DRS_CULLMODE, D3DCULL_CCW);
     device->SetRenderState(D3DRS_LIGHTING, scene->getLightingEnabled() ? TRUE : FALSE);
 
-    // Projection matrix
     float aspect = width() / static_cast<float>(height());
     D3DXMATRIX proj;
     D3DXMatrixPerspectiveFovLH(&proj, D3DXToRadian(90.0f), aspect, 0.1f, 100.0f);
     device->SetTransform(D3DTS_PROJECTION, &proj);
 
-    // Initial view matrix
     D3DXMATRIX view;
     D3DXVECTOR3 lookAt = cameraPos + cameraDir;
     D3DXMatrixLookAtLH(&view, &cameraPos, &lookAt, &cameraUp);
     device->SetTransform(D3DTS_VIEW, &view);
 
-    // Initialize and restore scene objects and skybox
     if (scene) {
         scene->restoreDeviceObjects(device);
         scene->updateSkybox(device);
 
-        // Ambient и lighting
         D3DCOLORVALUE ambient = scene->getAmbientColor();
         device->SetRenderState(D3DRS_AMBIENT, D3DCOLOR_COLORVALUE(
             ambient.r, ambient.g, ambient.b, ambient.a));
@@ -166,7 +159,7 @@ void Viewport::focusOutEvent(QFocusEvent* event)
 }
 
 void Viewport::paintEvent(QPaintEvent*) {
-    // No Qt painting
+    // no Qt painting
 }
 
 void Viewport::resizeEvent(QResizeEvent* event) {
@@ -393,7 +386,6 @@ void Viewport::updateCamera(float deltaTime) {
         cameraPos += cameraUp * moveSpeed;
     }
 
-    // Update view matrix
     D3DXMATRIX view;
     D3DXVECTOR3 lookAt = cameraPos + cameraDir;
     D3DXMatrixLookAtLH(&view, &cameraPos, &lookAt, &cameraUp);
@@ -412,12 +404,10 @@ void Viewport::applyCommonRenderStates() {
     device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
     device->SetRenderState(D3DRS_LIGHTING, scene->getLightingEnabled() ? TRUE : FALSE);
 
-    // Color of ambient light
     D3DCOLORVALUE ambient = scene->getAmbientColor();
     device->SetRenderState(D3DRS_AMBIENT, D3DCOLOR_COLORVALUE(
         ambient.r, ambient.g, ambient.b, ambient.a));
 
-    // Projection
     float aspect = width() / float(height());
     D3DXMATRIX proj;
     D3DXMatrixPerspectiveFovLH(&proj, D3DXToRadian(90), aspect, 0.1f, 100.0f);
@@ -606,6 +596,10 @@ void Viewport::render() {
     qint64 currentTime = elapsedTimer.elapsed();
     float deltaTime = lastTime > 0 ? (currentTime - lastTime) / 1000.0f : 0.016f;
     lastTime = currentTime;
+
+    if (scene && scene->isPhysicsEnabled()) {
+        scene->physicsUpdate(deltaTime);
+    }
 
     if (deltaTime > 0.1f) deltaTime = 0.016f;
 

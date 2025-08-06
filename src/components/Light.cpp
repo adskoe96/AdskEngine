@@ -76,11 +76,9 @@ void Light::render(LPDIRECT3DDEVICE9 device)
 
 void Light::createInspector(QWidget* parent, QFormLayout* layout)
 {
-    // Label of component
     auto* componentLabel = new QLabel("Light", parent);
     layout->addRow(componentLabel);
 
-    // Type
     auto* combo = new QComboBox(parent);
     combo->addItems({ "Directional","Point","Spot" });
     combo->setCurrentIndex(int(type));
@@ -88,28 +86,24 @@ void Light::createInspector(QWidget* parent, QFormLayout* layout)
         [this](int i) { type = LightType(i); emit getOwner()->propertiesChanged(); });
     layout->addRow("Light Type", combo);
 
-    // Intensity
     auto* intens = new QDoubleSpinBox(parent);
     intens->setRange(0, 10); intens->setValue(intensity);
     connect(intens, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
         [this](double v) { intensity = float(v); emit getOwner()->propertiesChanged(); });
     layout->addRow("Intensity", intens);
 
-    // Radius
     auto* rad = new QDoubleSpinBox(parent);
     rad->setRange(0, 10000); rad->setValue(radius);
     connect(rad, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
         [this](double v) { radius = float(v); emit getOwner()->propertiesChanged(); });
     layout->addRow("Radius", rad);
 
-    // Falloff
     auto* fal = new QDoubleSpinBox(parent);
     fal->setRange(0, 90); fal->setValue(radius);
     connect(fal, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
         [this](double v) { spotFalloff = float(v); emit getOwner()->propertiesChanged(); });
     layout->addRow("Falloff", rad);
 
-    // Color
     auto* btn = new QPushButton(parent);
     QColor qc;
     qc.setRgbF(color.r, color.g, color.b);

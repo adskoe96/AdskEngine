@@ -47,7 +47,6 @@ public:
     void setMeshPath(const QString& path);
     const QString& getMeshPath() const { return meshPath; }
 
-    // Frustum culling
     bool isVisible(const D3DXMATRIX& viewProj) const;
 
 private:
@@ -60,6 +59,7 @@ private:
     bool worldMatrixValid = false;
 
     QString meshPath;
+    QLabel* mrLabel;
 
     bool loadMeshFromFile(const QString& path);
     void releaseResources();

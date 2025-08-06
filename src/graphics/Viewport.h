@@ -1,16 +1,15 @@
 #pragma once
 
+#include "Skybox.h"
+#include "Scene.h"
+#include "dragAxis.h"
 #include <QWidget>
 #include <QTimer>
 #include <QPoint>
 #include <QSet>
 #include <QElapsedTimer>
-
 #include <d3d9.h>
 #include <d3dx9.h>
-#include "Skybox.h"
-#include "Scene.h"
-#include <dragAxis.h>
 
 class Scene;
 
@@ -34,12 +33,10 @@ protected:
     void resizeEvent(QResizeEvent* event) override;
     void showEvent(QShowEvent* event) override;
 
-    // Focus
     void enterEvent(QEvent* event) override;
     void leaveEvent(QEvent* event) override;
     void focusOutEvent(QFocusEvent* event) override;
 
-    // Input
     void keyPressEvent(QKeyEvent* event) override;
     void keyReleaseEvent(QKeyEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;

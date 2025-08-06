@@ -1,19 +1,21 @@
 #pragma once
 
+#include "PhysicsSystem.h"
+#include "MeshRenderer.h"
+#include "SceneObject.h"
+#include "Skybox.h"
 #include <QObject>
 #include <vector>
 #include <memory>
 #include <mutex>
 #include <d3d9.h>
 #include <QJsonObject>
-#include "MeshRenderer.h"
-#include "SceneObject.h"
-#include "Skybox.h"
+
 
 class Scene : public QObject {
     Q_OBJECT
 public:
-    explicit Scene(QObject* parent = nullptr);
+    Scene(QObject* parent = nullptr);
     ~Scene();
 
     void updateSkybox(LPDIRECT3DDEVICE9 device);
@@ -28,11 +30,9 @@ public:
     void invalidateDeviceObjects();
     void restoreDeviceObjects(LPDIRECT3DDEVICE9 device);
 
-    // Serialization
     void saveToFile(const QString& filePath);
     void loadFromFile(const QString& filePath);
 
-    // Environment settings
     void setSkyboxPath(const std::string& path) {
         if (skyboxPath != path) {
             skyboxPath = path;
@@ -72,11 +72,15 @@ public:
         }
     }
     bool getLightingEnabled() const { return lightingEnabled; }
-
     bool isLightingDirty() const { return lightingDirty; }
+
     void clearLightingDirty() { lightingDirty = false; }
     bool isSkyboxDirty() const { return skyboxDirty; }
     void clearSkyboxDirty() { skyboxDirty = false; }
+
+    bool isPhysicsEnabled() const { return PhysicsSystem::getInstance().isSimulationEnabled(); }
+    void physicsUpdate(float deltaTime);
+    void setPhysicsEnabled(bool enabled);
 
 signals:
     void objectAdded(SceneObject* object);

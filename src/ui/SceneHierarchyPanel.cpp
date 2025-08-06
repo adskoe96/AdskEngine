@@ -5,8 +5,7 @@
 #include <QVBoxLayout>
 #include <QLabel>
 
-SceneHierarchyPanel::SceneHierarchyPanel(Scene* scene, QWidget* parent)
-    : QWidget(parent), scene(scene)
+SceneHierarchyPanel::SceneHierarchyPanel(Scene* scene, QWidget* parent) : QWidget(parent), scene(scene)
 {
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(6, 6, 6, 6);
@@ -24,13 +23,37 @@ SceneHierarchyPanel::SceneHierarchyPanel(Scene* scene, QWidget* parent)
 
     treeWidget->viewport()->installEventFilter(this);
 
-    // selection change
-    connect(treeWidget, &QTreeWidget::itemSelectionChanged,
-        this, &SceneHierarchyPanel::onItemSelectionChanged);
-    // update on add/remove
+    connect(treeWidget, &QTreeWidget::itemSelectionChanged, this, &SceneHierarchyPanel::onItemSelectionChanged);
     connect(scene, &Scene::objectAdded, this, &SceneHierarchyPanel::updateHierarchy);
     connect(scene, &Scene::objectRemoved, this, &SceneHierarchyPanel::updateHierarchy);
     connect(treeWidget, &QTreeWidget::itemChanged, this, &SceneHierarchyPanel::onItemEdited);
+
+    contextMenu = new QMenu(this);
+    renameAction = contextMenu->addAction("Rename");
+    deleteAction = contextMenu->addAction("Delete");
+
+    connect(renameAction, &QAction::triggered, [this]() {
+        if (auto item = treeWidget->currentItem()) {
+            treeWidget->editItem(item, 0);
+        }
+    });
+
+    connect(deleteAction, &QAction::triggered, [this]() {
+        auto selectedItems = treeWidget->selectedItems();
+        if (!selectedItems.isEmpty()) {
+            auto* item = selectedItems.first();
+            if (auto obj = itemObjectMap.value(item)) {
+                this->scene->removeObject(obj.data());
+            }
+        }
+    });
+
+    treeWidget->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(treeWidget, &QTreeWidget::customContextMenuRequested, [this](const QPoint& pos) {
+        if (treeWidget->itemAt(pos)) {
+            contextMenu->exec(treeWidget->viewport()->mapToGlobal(pos));
+        }
+    });
 }
 
 void SceneHierarchyPanel::updateHierarchy() {
@@ -82,6 +105,26 @@ bool SceneHierarchyPanel::eventFilter(QObject* watched, QEvent* ev)
             return true;
         }
     }
+    else if (ev->type() == QEvent::KeyPress) {
+        QKeyEvent* keyEvent = static_cast<QKeyEvent*>(ev);
+        if (keyEvent->key() == Qt::Key_F2) {
+            if (auto item = treeWidget->currentItem()) {
+                treeWidget->editItem(item, 0);
+                return true;
+            }
+        }
+    else if (keyEvent->key() == Qt::Key_Delete) {
+        auto selectedItems = treeWidget->selectedItems();
+        if (!selectedItems.isEmpty()) {
+            auto* item = selectedItems.first();
+            if (auto obj = itemObjectMap.value(item)) {
+                this->scene->removeObject(obj.data());
+                return true;
+                }
+            }
+        }
+    }
+
     return QWidget::eventFilter(watched, ev);
 }
 
@@ -89,12 +132,12 @@ void SceneHierarchyPanel::onItemSelectionChanged() {
     auto selectedItems = treeWidget->selectedItems();
     if (!selectedItems.isEmpty()) {
         auto* selectedItem = selectedItems.first();
-        auto objPtr = itemObjectMap.value(selectedItem); // QPointer<SceneObject>
+        auto objPtr = itemObjectMap.value(selectedItem);
         if (objPtr) {
-            emit objectSelected(objPtr.data()); // We're only transferring a live object
+            emit objectSelected(objPtr.data());
         }
         else {
-            emit objectSelected(nullptr); // If the object is deleted, pass nullptr
+            emit objectSelected(nullptr);
         }
     }
     else {
@@ -127,4 +170,19 @@ void SceneHierarchyPanel::onObjectNameChanged(const std::string& newName)
             break;
         }
     }
+}
+
+void SceneHierarchyPanel::keyPressEvent(QKeyEvent* event)
+{
+    if (event->key() == Qt::Key_Delete) {
+        auto selectedItems = treeWidget->selectedItems();
+        if (!selectedItems.isEmpty()) {
+            auto* item = selectedItems.first();
+            if (auto obj = itemObjectMap.value(item)) {
+                scene->removeObject(obj.data());
+            }
+        }
+    }
+
+    QWidget::keyPressEvent(event);
 }

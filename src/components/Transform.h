@@ -6,8 +6,8 @@
 #include <QFormLayout>
 #include <QWidget>
 #include <QJsonObject>
+#include <QLabel>
 #include <d3dx9math.h>
-
 
 class SceneObject;
 
@@ -45,6 +45,8 @@ public:
     void createInspector(QWidget* parent, QFormLayout* layout) override;
 
 private:
+    QLabel* transformLabel;
+
     D3DXVECTOR3 position{ 0, 0, 0 };
     D3DXVECTOR3 rotation{ 0, 0, 0 };
     D3DXVECTOR3 scale{ 1, 1, 1 };
