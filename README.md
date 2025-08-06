@@ -33,7 +33,7 @@ vcpkg install joltphysics
 - [ ] Advanced Gizmo (Colliders, Move | Rotate | Scale modes)
 - [ ] Animation Component (animations imported from models)
 - [ ] Materials System (shaders and material settings)
-- [-] Physics Components (Colliders, Rigidbodies)
+- [ ] Physics Components (Colliders, Rigidbodies)
 - [ ] Particles System
 - [ ] UI System
 - [ ] C# Scripts
