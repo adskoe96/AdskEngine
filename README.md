@@ -30,6 +30,7 @@ vcpkg install joltphysics
 - [x] Transform Component
 - [x] MeshRenderer Component (FBX, OBJ)
 - [x] Light Component (Point, Spotlight, Directional)
+- [ ] Advanced Gizmo (Colliders, Move | Rotate | Scale modes)
 - [ ] Animation Component (animations imported from models)
 - [ ] Materials System (shaders and material settings)
 - [ ] Physics Components (Colliders, Rigidbodies)
